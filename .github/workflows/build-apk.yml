@@ -22,9 +22,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -39,10 +36,14 @@ jobs:
           cp i18n.js android/app/src/main/assets/
           cp layar.ico android/app/src/main/assets/
 
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
       - name: Build Android TV APK
         working-directory: ./android
         run: |
-          gradle assembleRelease assembleDebug --stacktrace
+          gradle assembleDebug assembleRelease --stacktrace
 
       - name: Collect Generated APKs
         run: |
