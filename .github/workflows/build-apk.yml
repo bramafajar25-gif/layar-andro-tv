@@ -43,7 +43,14 @@ jobs:
       - name: Build Android TV APK
         working-directory: ./android
         run: |
-          gradle assembleDebug --stacktrace
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          gradle assembleDebug --stacktrace 2>&1 | tee gradle_build.log || {
+            echo "### ❌ Gradle Build Failed" >> $GITHUB_STEP_SUMMARY
+            echo '```text' >> $GITHUB_STEP_SUMMARY
+            tail -n 80 gradle_build.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          }
 
       - name: Collect Generated APKs
         run: |
