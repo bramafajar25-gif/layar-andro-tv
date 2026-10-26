@@ -22,6 +22,9 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -37,8 +40,8 @@ jobs:
           cp layar.ico android/app/src/main/assets/
 
       - name: Build Android TV APK
+        working-directory: ./android
         run: |
-          cd android
           gradle assembleRelease assembleDebug --stacktrace
 
       - name: Collect Generated APKs
@@ -53,4 +56,3 @@ jobs:
           name: Layar-Android-TV-APK
           path: dist/apk/*.apk
           retention-days: 30
-
