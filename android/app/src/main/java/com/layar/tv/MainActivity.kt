@@ -102,3 +102,4 @@ class MainActivity : AppCompatActivity() {
         webView.destroy()
     }
 }
+
