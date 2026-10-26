@@ -1,0 +1,11 @@
+node_modules/
+.runtime/
+.tools/
+.backup/
+source-*
+*.log
+.gradle/
+android/.gradle/
+android/build/
+android/app/build/
+dist/apk/

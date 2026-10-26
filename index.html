@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://image.tmdb.org https://z2.idlixku.com; connect-src 'self'; object-src 'none'; base-uri 'none'">
+  <title>Layar</title>
+  <link rel="icon" href="layar.ico">
+  <link rel="stylesheet" href="cinema.css">
+  <script defer src="i18n.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <svg class="svg-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 13 8-13 8z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L20 5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5h6l2 2h10v13H3z"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M5 3v7m0 4v7M12 3v11m0 4v3M19 3v3m0 4v11M2 10h6m1 4h6m1-8h6"/></symbol>
+  </defs></svg>
+  <header id="nav">
+    <button class="wordmark" id="home" aria-label="Layar, kembali ke beranda" data-i18n-aria-label="Layar, kembali ke beranda">LAYAR</button>
+    <nav aria-label="Navigasi utama" data-i18n-aria-label="Navigasi utama">
+      <button data-tab="home" class="active" aria-current="page" data-i18n="Beranda">Beranda</button>
+      <button data-tab="tv_series" data-i18n="Series">Series</button>
+      <button data-tab="movie" data-i18n="Film">Film</button>
+      <button data-tab="list" data-i18n="Daftarku">Daftarku</button>
+    </nav>
+    <div class="nav-end">
+      <select id="language" class="language-select" aria-label="Bahasa tampilan" data-i18n-aria-label="Bahasa tampilan" title="Bahasa tampilan" data-i18n-title="Bahasa tampilan"><option value="id">ID</option><option value="en">EN</option></select>
+      <label class="search" title="Cari judul · /" data-i18n-title="Cari judul · /"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input id="search" type="search" placeholder="Film, series, dan lainnya" data-i18n-placeholder="Film, series, dan lainnya" aria-label="Cari film atau series" data-i18n-aria-label="Cari film atau series" autocomplete="off"></label>
+      <button id="openFile" class="nav-icon" title="Buka file video di mpv" data-i18n-title="Buka file video di mpv" aria-label="Buka file video di mpv" data-i18n-aria-label="Buka file video di mpv"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg></button>
+      <button id="cinemaSettings" class="nav-icon" title="Kualitas video dan audio" data-i18n-title="Kualitas video dan audio" aria-label="Kualitas video dan audio" data-i18n-aria-label="Kualitas video dan audio"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg></button>
+      <button id="settings" class="profile" title="Pengaturan Layar" data-i18n-title="Pengaturan Layar" aria-label="Pengaturan Layar" data-i18n-aria-label="Pengaturan Layar"><span class="profile-face" aria-hidden="true"></span></button>
+    </div>
+  </header>
+  <main id="main" aria-busy="true"></main>
+  <footer><span class="footer-logo">LAYAR</span><span data-i18n="Film, series, dan waktu buat diri sendiri.">Film, series, dan waktu buat diri sendiri.</span><span class="source-label"><i></i><span data-i18n="Katalog IDLIX">Katalog IDLIX</span></span></footer>
+  <div id="modal" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Detail judul" data-i18n-aria-label="Detail judul" tabindex="-1"><div id="dialog" class="dialog"></div></div>
+  <section id="player" class="player hidden" aria-label="Player Layar" data-i18n-aria-label="Player Layar">
+    <div class="player-top">
+      <button id="playerBack" class="icon-button" aria-label="Tutup player" data-i18n-aria-label="Tutup player"><svg class="icon"><use href="#i-arrow"/></svg></button>
+      <div class="player-heading"><span id="playerTitle"></span><small id="playerSubtitle"></small></div>
+      <span id="streamInfo" class="player-source" data-i18n="MENYIAPKAN VIDEO">MENYIAPKAN VIDEO</span>
+      <span id="subtitleInfo" class="subtitle-info" data-i18n="Subtitle: cek menu CC" title="Belum dapat memastikan sub Indo. Pilih Indonesia / Indonesian di menu CC atau Subtitle jika tersedia." data-i18n-title="Belum dapat memastikan sub Indo. Pilih Indonesia / Indonesian di menu CC atau Subtitle jika tersedia.">Subtitle: cek menu CC</span>
+      <button id="playerSidebar" class="icon-button" aria-label="Tampilkan atau sembunyikan episode" data-i18n-aria-label="Tampilkan atau sembunyikan episode" title="Daftar episode" data-i18n-title="Daftar episode"><svg class="icon"><use href="#i-grid"/></svg></button>
+      <button id="fullscreen" class="icon-button" aria-label="Layar penuh" data-i18n-aria-label="Layar penuh"><svg class="icon"><use href="#i-expand"/></svg></button>
+    </div>
+    <div class="player-layout">
+      <div class="player-left"><div id="playerSurface" class="player-surface"><div id="playerMessage" class="player-message"><span class="spinner"></span><p data-i18n="Menyiapkan ruang tonton…">Menyiapkan ruang tonton…</p></div></div><div class="player-bottom"><span id="playerNote" role="status" data-i18n="Menyiapkan sesi pemutaran.">Menyiapkan sesi pemutaran.</span><button id="nativePlayer" class="text-button" disabled title="Menunggu alamat stream dari sumber" data-i18n-title="Menunggu alamat stream dari sumber" data-i18n="Putar di mpv ↗">Putar di mpv ↗</button><button id="retryPlayer" class="text-button" data-i18n="Muat ulang">Muat ulang</button><button id="openSource" class="text-button" data-i18n="Buka sumber ↗">Buka sumber ↗</button></div></div>
+      <aside id="playerAside" class="player-aside"><div class="aside-heading"><span class="eyebrow" data-i18n="LANJUT KE EPISODE BERIKUTNYA">LANJUT KE EPISODE BERIKUTNYA</span><h2 data-i18n="Episode">Episode</h2><select id="playerSeason" aria-label="Season player" data-i18n-aria-label="Season player"></select></div><div id="playerEpisodes" class="player-episodes"></div></aside>
+    </div>
+  </section>
+  <div id="toast" role="status"></div>
+</body>
+</html>
