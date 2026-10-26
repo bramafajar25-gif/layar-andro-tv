@@ -44,23 +44,11 @@ jobs:
         working-directory: ./android
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          gradle assembleDebug --stacktrace 2>&1 | tee gradle_build.log || {
-            echo "### ❌ Gradle Build Failed" >> $GITHUB_STEP_SUMMARY
-            echo '```text' >> $GITHUB_STEP_SUMMARY
-            tail -n 80 gradle_build.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            exit 1
-          }
+          gradle assembleDebug --stacktrace
 
-      - name: Collect Generated APKs
-        run: |
-          mkdir -p dist/apk
-          find android/app/build/outputs/apk/ -type f -name "*.apk" -exec cp {} dist/apk/ \;
-          ls -la dist/apk/
-
-      - name: Upload APK Artifacts
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Layar-Android-TV-APK
-          path: dist/apk/*.apk
+          path: android/app/build/outputs/apk/**/*.apk
           retention-days: 30
