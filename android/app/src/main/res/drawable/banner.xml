@@ -1,18 +1,14 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="320dp"
-    android:height="180dp"
-    android:viewportWidth="320"
-    android:viewportHeight="180">
-    <path
-        android:fillColor="#141414"
-        android:pathData="M0,0h320v180h-320z" />
-    <!-- Letter L in red -->
-    <path
-        android:fillColor="#E50914"
-        android:pathData="M70,45h26v65h40v25h-66z" />
-    <!-- Red accent stripe -->
-    <path
-        android:fillColor="#E50914"
-        android:pathData="M0,172h320v8h-320z" />
-</vector>
-
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#141414" />
+        </shape>
+    </item>
+    <item android:gravity="bottom">
+        <shape android:shape="rectangle">
+            <solid android:color="#E50914" />
+            <size android:height="6dp" />
+        </shape>
+    </item>
+</layer-list>

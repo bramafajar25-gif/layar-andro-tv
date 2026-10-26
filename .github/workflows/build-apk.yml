@@ -43,7 +43,7 @@ jobs:
       - name: Build Android TV APK
         working-directory: ./android
         run: |
-          gradle assembleDebug assembleRelease --stacktrace
+          gradle assembleDebug --stacktrace
 
       - name: Collect Generated APKs
         run: |

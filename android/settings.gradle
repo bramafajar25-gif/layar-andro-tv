@@ -12,6 +12,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "LayarTV"
-include(":app")
 
+rootProject.name = "LayarTV"
+include ':app'

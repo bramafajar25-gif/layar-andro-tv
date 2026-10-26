@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
@@ -15,6 +16,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONObject
+import java.nio.charset.StandardCharsets
 
 class PlayerActivity : AppCompatActivity() {
 
@@ -33,6 +35,7 @@ class PlayerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = (
             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 or View.SYSTEM_UI_FLAG_FULLSCREEN
@@ -67,10 +70,12 @@ class PlayerActivity : AppCompatActivity() {
             [data-layar-player] .hero-player-frame{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;margin:0!important;transform:none!important;border-radius:0!important}
         """.trimIndent()
 
+        val encodedCSS = Base64.encodeToString(playerCSS.toByteArray(StandardCharsets.UTF_8), Base64.NO_WRAP)
+
         val injectScript = """
             (function() {
                 var style = document.createElement('style');
-                style.textContent = ${JSONObject.quote(playerCSS)};
+                style.textContent = atob('$encodedCSS');
                 document.head.appendChild(style);
 
                 function update() {
@@ -177,4 +182,3 @@ class PlayerActivity : AppCompatActivity() {
         webView.destroy()
     }
 }
-
