@@ -7,7 +7,9 @@ import android.os.Bundle
 import android.util.Base64
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
+import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -16,6 +18,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONObject
+import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
 
 class PlayerActivity : AppCompatActivity() {
@@ -24,17 +27,27 @@ class PlayerActivity : AppCompatActivity() {
         const val EXTRA_OPTIONS = "options"
         private val AD_HOSTS = listOf(
             "doubleclick.net", "googlesyndication.com", "adsterra.com",
-            "popads.net", "popcash.net", "propellerads.com", "exoclick.com"
+            "popads.net", "popcash.net", "propellerads.com", "exoclick.com",
+            "histats.com", "google-analytics.com", "googletagmanager.com",
+            "mc.yandex.ru", "statcounter.com", "adnxs.com", "criteo.com",
+            "juicyads.com", "trafficjunky.com", "bidvertiser.com", "clickadu.com",
+            "monetag.com", "hilltopads.com", "onclickalgo.com"
         )
     }
 
     private lateinit var webView: WebView
+    private var customView: View? = null
+    private var customCallback: WebChromeClient.CustomViewCallback? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+        )
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = (
             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
@@ -52,13 +65,23 @@ class PlayerActivity : AppCompatActivity() {
         }
         setContentView(webView)
 
+        // Enable third-party cookies for CDN authentication & session tokens
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.setAcceptCookie(true)
+        cookieManager.setAcceptThirdPartyCookies(webView, true)
+
         val settings = webView.settings
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
+        settings.databaseEnabled = true
         settings.mediaPlaybackRequiresUserGesture = false
         settings.userAgentString = IdlixClient.USER_AGENT
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         settings.cacheMode = WebSettings.LOAD_DEFAULT
+        settings.allowFileAccess = true
+        settings.allowContentAccess = true
+        settings.loadWithOverviewMode = true
+        settings.useWideViewPort = true
 
         val playerCSS = """
             html,body{background:#000!important;scrollbar-width:none!important}
@@ -74,51 +97,115 @@ class PlayerActivity : AppCompatActivity() {
 
         val injectScript = """
             (function() {
+                if (window.__layarPlayerInjected) return;
+                window.__layarPlayerInjected = true;
+
                 var style = document.createElement('style');
                 style.textContent = atob('$encodedCSS');
-                document.head.appendChild(style);
+                (document.head || document.documentElement).appendChild(style);
 
-                function update() {
+                function checkAndPlay() {
                     var target = document.querySelector('.hero-player-playing') || document.querySelector('.detail-backdrop');
                     var previous = document.querySelector('[data-layar-player]');
-                    if (previous !== target) {
+                    if (target && previous !== target) {
                         if (previous) previous.removeAttribute('data-layar-player');
-                        if (target) target.setAttribute('data-layar-player', '');
+                        target.setAttribute('data-layar-player', '');
                     }
-                    document.body.classList.toggle('layar-player-active', !!target);
-                    for (var button of document.querySelectorAll('button')) {
-                        if (!button.disabled && button.getClientRects().length && /^(skip ad|skip ads|lewati iklan|lanjutkan ke video)$/i.test(button.textContent.trim())) {
-                            button.click();
+                    if (target) {
+                        document.body.classList.add('layar-player-active');
+                    }
+
+                    var buttons = document.querySelectorAll('button, .skip-button, .jw-skip');
+                    for (var i = 0; i < buttons.length; i++) {
+                        var b = buttons[i];
+                        var txt = (b.textContent || '').trim().toLowerCase();
+                        if (/^(skip ad|skip ads|lewati iklan|lanjutkan ke video|skip)$/i.test(txt)) {
+                            b.click();
+                        }
+                    }
+
+                    var videos = document.querySelectorAll('video');
+                    for (var j = 0; j < videos.length; j++) {
+                        var v = videos[j];
+                        if (v.paused && v.readyState >= 2) {
+                            v.play().catch(function(){});
                         }
                     }
                 }
-                new MutationObserver(function() { update(); }).observe(document.body, { childList: true, subtree: true });
-                update();
+
+                setInterval(checkAndPlay, 300);
+                checkAndPlay();
+                new MutationObserver(checkAndPlay).observe(document.documentElement, { childList: true, subtree: true });
             })();
         """.trimIndent()
+
+        fun injectTools() {
+            webView.evaluateJavascript(injectScript, null)
+        }
 
         webView.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                 val urlStr = request?.url?.toString() ?: return null
                 val uri = Uri.parse(urlStr)
-                val host = uri.host ?: ""
+                val host = uri.host?.lowercase() ?: ""
+                val path = uri.path ?: ""
 
                 val isAd = AD_HOSTS.any { host == it || host.endsWith(".$it") } ||
-                    (host == "z2.idlixku.com" && uri.path == "/api/watch/session/media")
+                    (host == "z2.idlixku.com" && path == "/api/watch/session/media") ||
+                    path.contains("/vast") || path.contains("/adserver")
 
                 if (isAd) {
-                    return WebResourceResponse("text/plain", "utf-8", 200, "OK", emptyMap(), null)
+                    return WebResourceResponse(
+                        "text/plain",
+                        "utf-8",
+                        404,
+                        "Not Found",
+                        emptyMap(),
+                        ByteArrayInputStream(ByteArray(0))
+                    )
                 }
                 return super.shouldInterceptRequest(view, request)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                webView.evaluateJavascript(injectScript, null)
+                injectTools()
             }
         }
 
-        webView.webChromeClient = WebChromeClient()
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                if (customView != null) {
+                    callback?.onCustomViewHidden()
+                    return
+                }
+                customView = view
+                customCallback = callback
+                webView.visibility = View.GONE
+                (window.decorView as? ViewGroup)?.addView(
+                    view,
+                    ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                )
+            }
+
+            override fun onHideCustomView() {
+                if (customView == null) return
+                (window.decorView as? ViewGroup)?.removeView(customView)
+                customView = null
+                customCallback?.onCustomViewHidden()
+                webView.visibility = View.VISIBLE
+            }
+
+            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                super.onProgressChanged(view, newProgress)
+                if (newProgress >= 15) {
+                    injectTools()
+                }
+            }
+        }
 
         val optionsJson = intent.getStringExtra(EXTRA_OPTIONS) ?: "{}"
         val playbackUrl = try {
@@ -170,6 +257,10 @@ class PlayerActivity : AppCompatActivity() {
                 return true
             }
             KeyEvent.KEYCODE_BACK -> {
+                if (customView != null) {
+                    webView.webChromeClient?.onHideCustomView()
+                    return true
+                }
                 finish()
                 return true
             }

@@ -416,6 +416,25 @@ $('#search').addEventListener('input', event => {
   currentQuery = event.target.value.trim();
   searchTimer = setTimeout(render, 350);
 });
+$('.search')?.addEventListener('click', () => {
+  $('#search').focus();
+  window.AndroidBridge?.showKeyboard?.();
+});
+$('.search')?.addEventListener('keydown', event => {
+  if (event.key === 'Enter' && event.target !== $('#search')) {
+    event.preventDefault();
+    $('#search').focus();
+    window.AndroidBridge?.showKeyboard?.();
+  }
+});
+$('#search').addEventListener('focus', () => {
+  window.AndroidBridge?.showKeyboard?.();
+});
+$('#search').addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    $('#search').blur();
+  }
+});
 $('#modal').onclick = event => { if (event.target === $('#modal') || event.target.closest('[data-close]')) closeModal(); };
 $('#playerBack').onclick = closePlayer;
 $('#playerSeason').onchange = event => loadPlayerEpisodes(Number(event.target.value));

@@ -4,11 +4,14 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.view.inputmethod.InputMethodManager
 import android.webkit.JavascriptInterface
+import android.webkit.WebView
 import org.json.JSONObject
 
 class AndroidBridge(
     private val activity: Activity,
+    private val webView: WebView,
     private val idlixClient: IdlixClient
 ) {
     private val prefs = activity.getSharedPreferences("layar_prefs", Context.MODE_PRIVATE)
@@ -56,7 +59,7 @@ class AndroidBridge(
 
     @JavascriptInterface
     fun closePlayer() {
-        // PlayerActivity manages its own lifecycle via Back button or close
+        // Handled by PlayerActivity
     }
 
     @JavascriptInterface
@@ -81,10 +84,18 @@ class AndroidBridge(
     }
 
     @JavascriptInterface
+    fun showKeyboard() {
+        activity.runOnUiThread {
+            val imm = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            webView.requestFocus()
+            imm?.showSoftInput(webView, InputMethodManager.SHOW_IMPLICIT)
+        }
+    }
+
+    @JavascriptInterface
     fun exitApp() {
         activity.runOnUiThread {
             activity.finish()
         }
     }
 }
-
