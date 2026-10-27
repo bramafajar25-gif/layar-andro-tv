@@ -11,6 +11,38 @@
   <script defer src="app.js"></script>
 </head>
 <body>
+  <div id="introSplash" class="intro-splash" role="presentation" aria-hidden="true">
+    <div class="intro-backdrop"></div>
+    <div class="intro-content">
+      <div class="intro-logo-box">
+        <svg class="intro-ribbon-svg" viewBox="0 0 120 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="ribbonGlow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="12" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+            <linearGradient id="ribbonStemGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#730B0F" />
+              <stop offset="45%" stop-color="#B81D24" />
+              <stop offset="100%" stop-color="#E50914" />
+            </linearGradient>
+            <linearGradient id="ribbonFootGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#E50914" />
+              <stop offset="100%" stop-color="#FF2E36" />
+            </linearGradient>
+          </defs>
+          <path d="M 28 15 H 52 V 88 H 105 V 118 H 28 Z" fill="#E50914" opacity="0.45" filter="url(#ribbonGlow)" />
+          <rect x="28" y="15" width="24" height="74" fill="url(#ribbonStemGrad)" />
+          <rect x="33" y="15" width="14" height="74" fill="#E50914" opacity="0.6" />
+          <path d="M 28 88 H 105 L 97 118 H 28 Z" fill="url(#ribbonFootGrad)" />
+          <path d="M 28 88 H 105 L 101 96 H 28 Z" fill="#FF5259" opacity="0.8" />
+          <path d="M 28 88 L 52 64 V 88 Z" fill="#200003" opacity="0.88" />
+        </svg>
+      </div>
+      <div class="intro-brand">LAYAR</div>
+      <div class="intro-flare"></div>
+    </div>
+  </div>
   <svg class="svg-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 13 8-13 8z" fill="currentColor" stroke="none"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 5 5"/></symbol>
@@ -34,7 +66,7 @@
     </nav>
     <div class="nav-end">
       <select id="language" class="language-select" aria-label="Bahasa tampilan" data-i18n-aria-label="Bahasa tampilan" title="Bahasa tampilan" data-i18n-title="Bahasa tampilan"><option value="id">ID</option><option value="en">EN</option></select>
-      <label class="search" title="Cari judul · /" data-i18n-title="Cari judul · /" tabindex="0"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input id="search" type="search" placeholder="Film, series, dan lainnya" data-i18n-placeholder="Film, series, dan lainnya" aria-label="Cari film atau series" data-i18n-aria-label="Cari film atau series" autocomplete="off"></label>
+      <div class="search" id="searchContainer" title="Cari judul · /" data-i18n-title="Cari judul · /" role="search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input id="search" type="search" placeholder="Film, series, dan lainnya" data-i18n-placeholder="Film, series, dan lainnya" aria-label="Cari film atau series" data-i18n-aria-label="Cari film atau series" autocomplete="off"></div>
       <button id="openFile" class="nav-icon" title="Buka file video di mpv" data-i18n-title="Buka file video di mpv" aria-label="Buka file video di mpv" data-i18n-aria-label="Buka file video di mpv"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg></button>
       <button id="cinemaSettings" class="nav-icon" title="Kualitas video dan audio" data-i18n-title="Kualitas video dan audio" aria-label="Kualitas video dan audio" data-i18n-aria-label="Kualitas video dan audio"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg></button>
       <button id="settings" class="profile" title="Pengaturan Layar" data-i18n-title="Pengaturan Layar" aria-label="Pengaturan Layar" data-i18n-aria-label="Pengaturan Layar"><span class="profile-face" aria-hidden="true"></span></button>

@@ -62,6 +62,7 @@ class PlayerActivity : AppCompatActivity() {
             setBackgroundColor(Color.BLACK)
             isFocusable = true
             isFocusableInTouchMode = true
+            setLayerType(View.LAYER_TYPE_HARDWARE, null)
         }
         setContentView(webView)
 
@@ -82,6 +83,8 @@ class PlayerActivity : AppCompatActivity() {
         settings.allowContentAccess = true
         settings.loadWithOverviewMode = true
         settings.useWideViewPort = true
+        settings.offscreenPreRaster = true
+        settings.safeBrowsingEnabled = false
 
         val playerCSS = """
             html,body{background:#000!important;scrollbar-width:none!important}
@@ -124,11 +127,25 @@ class PlayerActivity : AppCompatActivity() {
                         }
                     }
 
+                    var playOverlays = document.querySelectorAll('.jw-display-icon-container, .vjs-big-play-button, .play-button, [aria-label*="Play" i], [title*="Play" i], .hero-player-play, .play-icon');
+                    for (var k = 0; k < playOverlays.length; k++) {
+                        var po = playOverlays[k];
+                        if (po.offsetWidth > 0 && po.offsetHeight > 0) {
+                            po.click();
+                        }
+                    }
+
                     var videos = document.querySelectorAll('video');
                     for (var j = 0; j < videos.length; j++) {
                         var v = videos[j];
-                        if (v.paused && v.readyState >= 2) {
-                            v.play().catch(function(){});
+                        if (v.paused) {
+                            var p = v.play();
+                            if (p && p.catch) {
+                                p.catch(function() {
+                                    v.muted = true;
+                                    v.play().catch(function(){});
+                                });
+                            }
                         }
                     }
                 }
@@ -150,16 +167,39 @@ class PlayerActivity : AppCompatActivity() {
                 val host = uri.host?.lowercase() ?: ""
                 val path = uri.path ?: ""
 
-                val isAd = AD_HOSTS.any { host == it || host.endsWith(".$it") } ||
-                    (host == "z2.idlixku.com" && path == "/api/watch/session/media") ||
-                    path.contains("/vast") || path.contains("/adserver")
+                val isAdHost = AD_HOSTS.any { host == it || host.endsWith(".$it") }
+                val isVast = path.contains("/vast") || path.contains("/adserver")
+                val isAdSession = host == "z2.idlixku.com" && path == "/api/watch/session/media"
 
-                if (isAd) {
+                if (isVast) {
+                    val emptyVast = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"3.0\"/>"
+                    return WebResourceResponse(
+                        "application/xml",
+                        "utf-8",
+                        200,
+                        "OK",
+                        mapOf("Access-Control-Allow-Origin" to "*"),
+                        ByteArrayInputStream(emptyVast.toByteArray(StandardCharsets.UTF_8))
+                    )
+                }
+
+                if (isAdSession) {
+                    return WebResourceResponse(
+                        "application/json",
+                        "utf-8",
+                        200,
+                        "OK",
+                        mapOf("Access-Control-Allow-Origin" to "*"),
+                        ByteArrayInputStream("{}".toByteArray(StandardCharsets.UTF_8))
+                    )
+                }
+
+                if (isAdHost) {
                     return WebResourceResponse(
                         "text/plain",
                         "utf-8",
-                        404,
-                        "Not Found",
+                        200,
+                        "OK",
                         emptyMap(),
                         ByteArrayInputStream(ByteArray(0))
                     )

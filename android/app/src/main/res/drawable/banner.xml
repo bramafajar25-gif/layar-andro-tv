@@ -1,14 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <shape android:shape="rectangle">
-            <solid android:color="#141414" />
-        </shape>
-    </item>
-    <item android:gravity="bottom">
-        <shape android:shape="rectangle">
-            <solid android:color="#E50914" />
-            <size android:height="6dp" />
-        </shape>
-    </item>
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+
+    <!-- Cinema Dark Background -->
+    <path
+        android:fillColor="#0D0D0D"
+        android:pathData="M0,0h320v180h-320z" />
+
+    <!-- Ambient Red Glow in Center -->
+    <path
+        android:fillColor="#26E50914"
+        android:pathData="M30,20h70v130h90v20h-160z" />
+
+    <!-- Red Ribbon L Logo (Left-Center) -->
+    <!-- Drop Shadow -->
+    <path
+        android:fillColor="#55000000"
+        android:pathData="M48,34h26v84h60l-7,22h-79z" />
+
+    <!-- Vertical Stem -->
+    <path
+        android:fillColor="#B81D24"
+        android:pathData="M44,28h24v78h-24z" />
+    <path
+        android:fillColor="#E50914"
+        android:pathData="M48,28h17v78h-17z" />
+
+    <!-- Horizontal Foot -->
+    <path
+        android:fillColor="#E50914"
+        android:pathData="M44,106h68l-7,24h-61z" />
+    <path
+        android:fillColor="#FF2E36"
+        android:pathData="M44,106h68l-3,7h-65z" />
+
+    <!-- Corner Fold Shadow -->
+    <path
+        android:fillColor="#4D000000"
+        android:pathData="M44,106l24,-24v24z" />
+
+    <!-- Geometric Typography for "LAYAR" text on Right -->
+    <!-- L -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M142,66h9v38h18v9h-27z" />
+    <!-- A -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M182,66h11l13,47h-10l-2,-9h-10l-2,9h-10z M186,96h6l-3,-16z" />
+    <!-- Y -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M217,66h10l7,19l7,-19h10l-12,28v19h-10v-19z" />
+    <!-- A -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M259,66h11l13,47h-10l-2,-9h-10l-2,9h-10z M263,96h6l-3,-16z" />
+    <!-- R -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M293,66h15c8,0 13,4 13,12c0,6 -4,10 -9,12l10,23h-11l-9,-21h-9v21h-10z M303,84h5c3,0 5,-2 5,-4c0,-3 -2,-4 -5,-4h-5z" />
+
+    <!-- Subtitle text badge: PRIVATE CINEMA -->
+    <path
+        android:fillColor="#E50914"
+        android:pathData="M142,122h170v2h-170z" />
+
+    <!-- Bottom Accent Ribbon Stripe -->
+    <path
+        android:fillColor="#E50914"
+        android:pathData="M0,174h320v6h-320z" />
+</vector>

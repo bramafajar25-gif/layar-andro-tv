@@ -1,16 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <shape android:shape="rectangle">
-            <solid android:color="#141414" />
-            <corners android:radius="16dp" />
-        </shape>
-    </item>
-    <item android:gravity="center">
-        <shape android:shape="rectangle">
-            <solid android:color="#E50914" />
-            <size android:width="48dp" android:height="48dp" />
-            <corners android:radius="8dp" />
-        </shape>
-    </item>
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Premium Cinema Dark Full Background -->
+    <path
+        android:fillColor="#0D0D0D"
+        android:pathData="M0,0h108v108h-108z" />
+
+    <!-- Ambient Red Glow beneath Logo -->
+    <path
+        android:fillColor="#33E50914"
+        android:pathData="M24,20h24v68h40v10h-64z" />
+
+    <!-- Netflix Ribbon L - Base Stem (Deep Red with shadow) -->
+    <path
+        android:fillColor="#B81D24"
+        android:pathData="M26,16h20v54h-20z" />
+
+    <!-- Vertical Highlight ribbon overlay -->
+    <path
+        android:fillColor="#E50914"
+        android:pathData="M29,16h14v54h-14z" />
+
+    <!-- Netflix Ribbon L - Horizontal Foot (Vibrant Red with angled cut) -->
+    <path
+        android:fillColor="#E50914"
+        android:pathData="M26,70h54l-6,20h-48z" />
+
+    <!-- Horizontal Foot Top Highlight -->
+    <path
+        android:fillColor="#FF2E36"
+        android:pathData="M26,70h54l-2,6h-52z" />
+
+    <!-- Corner Diagonal Fold / Drop Shadow -->
+    <path
+        android:fillColor="#4D000000"
+        android:pathData="M26,70l20,-20v20z" />
+</vector>

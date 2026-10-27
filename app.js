@@ -433,6 +433,7 @@ $('#search').addEventListener('focus', () => {
 $('#search').addEventListener('keydown', event => {
   if (event.key === 'Enter') {
     $('#search').blur();
+    window.AndroidBridge?.hideKeyboard?.();
   }
 });
 $('#modal').onclick = event => { if (event.target === $('#modal') || event.target.closest('[data-close]')) closeModal(); };
@@ -491,6 +492,81 @@ document.addEventListener('keydown', event => {
     else if (!event.shiftKey && (document.activeElement === last || document.activeElement === $('#modal'))) { event.preventDefault(); first?.focus(); }
   }
 });
+
+function initNetflixIntro() {
+  const splash = $('#introSplash');
+  if (!splash) return;
+
+  function playIntroTaDum() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      const now = ctx.currentTime;
+
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(105, now + 0.05);
+      osc1.frequency.exponentialRampToValueAtTime(38, now + 0.35);
+      gain1.gain.setValueAtTime(0.35, now + 0.05);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now + 0.05);
+      osc1.stop(now + 0.4);
+
+      const freqs = [55, 110, 164.8, 220];
+      freqs.forEach((f, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        osc.type = idx === 0 ? 'sine' : 'sawtooth';
+        osc.frequency.setValueAtTime(f, now + 0.28);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(900, now + 0.28);
+        filter.frequency.exponentialRampToValueAtTime(160, now + 1.6);
+
+        const vol = idx === 0 ? 0.38 : 0.11;
+        gain.gain.setValueAtTime(0.001, now + 0.28);
+        gain.gain.linearRampToValueAtTime(vol, now + 0.33);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.75);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + 0.28);
+        osc.stop(now + 1.8);
+      });
+    } catch (_) {}
+  }
+
+  playIntroTaDum();
+
+  let dismissed = false;
+  function dismissSplash() {
+    if (dismissed) return;
+    dismissed = true;
+    splash.classList.add('fade-out');
+    setTimeout(() => {
+      splash.remove();
+    }, 550);
+  }
+
+  setTimeout(dismissSplash, 1850);
+  splash.addEventListener('click', dismissSplash);
+  window.addEventListener('keydown', () => {
+    if (!dismissed) dismissSplash();
+  }, { once: true });
+}
+
+initNetflixIntro();
 applyInterfaceLanguage();
 Promise.resolve(desktop?.setLanguage?.(i18n.language)).catch(error => toast(errorText(error)));
 render();
