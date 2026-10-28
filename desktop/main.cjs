@@ -13,6 +13,7 @@ const HOME = pathToFileURL(path.join(ROOT, 'index.html')).href;
 fs.mkdirSync(path.join(ROOT, '.runtime', 'profile'), { recursive: true });
 app.setPath('userData', path.join(ROOT, '.runtime', 'profile'));
 app.setName('Layar');
+app.setAppUserModelId('com.layar.app');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 let win, player, rect, playerGeneration = 0, monitor, streamURL = '', streamMetadata = {}, nativeProcess;
 const settingsPath = path.join(ROOT, '.runtime', 'profile', 'playback.json');
