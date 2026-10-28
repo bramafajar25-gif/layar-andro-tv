@@ -1,6 +1,8 @@
 package com.layar.tv
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.graphics.Color
 import android.os.Bundle
 import android.view.KeyEvent
@@ -13,16 +15,28 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.webkit.WebViewAssetLoader
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private val idlixClient = IdlixClient()
+    private val playerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        // The native player covers the catalogue's loading screen. Clear it on return.
+        webView.evaluateJavascript(
+            "if (window.__layarPlayerStatus) window.__layarPlayerStatus({state:'close-request'});",
+            null
+        )
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            WebView.setWebContentsDebuggingEnabled(true)
+        }
 
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = (
@@ -60,7 +74,11 @@ class MainActivity : AppCompatActivity() {
         settings.allowFileAccess = true
         settings.allowContentAccess = true
 
-        webView.addJavascriptInterface(AndroidBridge(this, webView, idlixClient), "AndroidBridge")
+        webView.addJavascriptInterface(AndroidBridge(this, webView) { options ->
+            playerLauncher.launch(Intent(this, PlayerActivity::class.java).apply {
+                putExtra(PlayerActivity.EXTRA_OPTIONS, options)
+            })
+        }, "AndroidBridge")
 
         val focusHelperJs = """
             (function() {

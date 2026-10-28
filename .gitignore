@@ -8,4 +8,10 @@ source-*
 android/.gradle/
 android/build/
 android/app/build/
+android/local.properties
+android/app/src/main/assets/index.html
+android/app/src/main/assets/app.js
+android/app/src/main/assets/cinema.css
+android/app/src/main/assets/i18n.js
+android/app/src/main/assets/layar.ico
 dist/apk/

@@ -13,7 +13,7 @@ Panduan lengkap: [dist/desktop/Panduan.md](dist/desktop/Panduan.md).
 
 Pilihan **ID / EN** di navigasi atas atau **Pengaturan → Bahasa tampilan** mengganti bahasa menu tanpa restart dan tersimpan lokal. Bahasa tampilan terpisah dari judul, sinopsis, serta subtitle sumber. Sub Indo tidak dijamin untuk seluruh katalog; pilih Indonesia di menu CC/Subtitle player bila tersedia. Indikator subtitle hanya menyatakan track yang terdeteksi, bukan jaminan untuk judul lain.
 
-Versi HP dan Android TV, APK, server Android, SDK, dan Gradle telah dihapus. Profil desktop dan Daftarku tetap tersedia. Pengaturan kualitas mpv, filter iklan, dan passthrough disimpan lokal.
+Source APK untuk HP dan Android TV tersedia di `android/`. Workflow [Build Android TV APK](.github/workflows/build-apk.yml) menjalankan tes, menyalin aset web, lalu membuat APK debug untuk kedua perangkat. Unduh artifact `Layar-Android-TV-APK` dari build yang berhasil. Android memakai Activity player sendiri; mpv dan pengaturan ukuran player hanya berlaku di desktop.
 
 Pemutaran internal menggunakan Electron WebContentsView terisolasi. Pop-up ditolak; filter iklan dapat dimatikan jika sumber bermasalah. Verifikasi dan waktu tunggu dari server tetap berlaku. Tidak ada file film yang disimpan atau diunduh.
 

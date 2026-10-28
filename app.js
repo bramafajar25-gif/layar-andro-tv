@@ -5,7 +5,7 @@ if (!window.layarDesktop && window.AndroidBridge) {
     api: async resource => {
       const res = await fetch('/api/source?resource=' + encodeURIComponent(resource));
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Sumber belum bisa dimuat.');
+      if (!res.ok || data.error) throw new Error(data.error || 'Sumber belum bisa dimuat.');
       return data;
     },
     settings: async () => {
@@ -310,7 +310,8 @@ function externalUrl(options) {
 }
 function openExternal(options) { if (desktop) desktop.openSource(options).catch(error => toast(errorText(error))); else window.open(externalUrl(options), '_blank', 'noopener,noreferrer'); }
 function updateBounds() {
-  if (!desktop || !playback) return;
+  // Android opens a separate Activity and has no Electron surface to resize.
+  if (!playback || typeof desktop?.bounds !== 'function') return;
   const rect = $('#playerSurface').getBoundingClientRect();
   desktop.bounds({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
 }
@@ -339,8 +340,8 @@ async function startPlayback(item, season, episode) {
     loadPlayerEpisodes(season);
   }
   const current = playback;
-  updateBounds();
   try {
+    updateBounds();
     await desktop.play(playbackOptions(current));
     if (playback !== current) return;
     const history = storage.get('history', []).filter(x => keyOf(x.item) !== keyOf(item));

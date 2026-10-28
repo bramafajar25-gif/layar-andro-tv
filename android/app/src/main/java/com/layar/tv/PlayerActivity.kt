@@ -3,13 +3,17 @@ package com.layar.tv
 import android.annotation.SuppressLint
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Message
 import android.util.Base64
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.CookieManager
+import android.webkit.JsPromptResult
+import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -31,7 +35,8 @@ class PlayerActivity : AppCompatActivity() {
             "histats.com", "google-analytics.com", "googletagmanager.com",
             "mc.yandex.ru", "statcounter.com", "adnxs.com", "criteo.com",
             "juicyads.com", "trafficjunky.com", "bidvertiser.com", "clickadu.com",
-            "monetag.com", "hilltopads.com", "onclickalgo.com"
+            "monetag.com", "hilltopads.com", "onclickalgo.com",
+            "meatusbyway.cfd", "tasterdinger.com"
         )
     }
 
@@ -83,8 +88,10 @@ class PlayerActivity : AppCompatActivity() {
         settings.allowContentAccess = true
         settings.loadWithOverviewMode = true
         settings.useWideViewPort = true
-        settings.offscreenPreRaster = true
-        settings.safeBrowsingEnabled = false
+        settings.setSupportMultipleWindows(true)
+        settings.javaScriptCanOpenWindowsAutomatically = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) settings.offscreenPreRaster = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) settings.safeBrowsingEnabled = false
 
         val playerCSS = """
             html,body{background:#000!important;scrollbar-width:none!important}
@@ -98,70 +105,58 @@ class PlayerActivity : AppCompatActivity() {
 
         val encodedCSS = Base64.encodeToString(playerCSS.toByteArray(StandardCharsets.UTF_8), Base64.NO_WRAP)
 
-        val injectScript = """
-            (function() {
-                if (window.__layarPlayerInjected) return;
-                window.__layarPlayerInjected = true;
-
-                var style = document.createElement('style');
-                style.textContent = atob('$encodedCSS');
-                (document.head || document.documentElement).appendChild(style);
-
-                function checkAndPlay() {
-                    var target = document.querySelector('.hero-player-playing') || document.querySelector('.detail-backdrop');
-                    var previous = document.querySelector('[data-layar-player]');
-                    if (target && previous !== target) {
-                        if (previous) previous.removeAttribute('data-layar-player');
-                        target.setAttribute('data-layar-player', '');
-                    }
-                    if (target) {
-                        document.body.classList.add('layar-player-active');
-                    }
-
-                    var buttons = document.querySelectorAll('button, .skip-button, .jw-skip');
-                    for (var i = 0; i < buttons.length; i++) {
-                        var b = buttons[i];
-                        var txt = (b.textContent || '').trim().toLowerCase();
-                        if (/^(skip ad|skip ads|lewati iklan|lanjutkan ke video|skip)$/i.test(txt)) {
-                            b.click();
-                        }
-                    }
-
-                    var playOverlays = document.querySelectorAll('.jw-display-icon-container, .vjs-big-play-button, .play-button, [aria-label*="Play" i], [title*="Play" i], .hero-player-play, .play-icon');
-                    for (var k = 0; k < playOverlays.length; k++) {
-                        var po = playOverlays[k];
-                        if (po.offsetWidth > 0 && po.offsetHeight > 0) {
-                            po.click();
-                        }
-                    }
-
-                    var videos = document.querySelectorAll('video');
-                    for (var j = 0; j < videos.length; j++) {
-                        var v = videos[j];
-                        if (v.paused) {
-                            var p = v.play();
-                            if (p && p.catch) {
-                                p.catch(function() {
-                                    v.muted = true;
-                                    v.play().catch(function(){});
-                                });
-                            }
-                        }
-                    }
-                }
-
-                setInterval(checkAndPlay, 300);
-                checkAndPlay();
-                new MutationObserver(checkAndPlay).observe(document.documentElement, { childList: true, subtree: true });
-            })();
-        """.trimIndent()
+        val blockAds = getSharedPreferences("layar_prefs", MODE_PRIVATE).getBoolean("blockAds", true)
+        val playerTools = assets.open("player-tools.js").bufferedReader().use { it.readText() }
+        val toolOptions = JSONObject().apply {
+            put("css", encodedCSS)
+            put("blockAds", blockAds)
+        }
+        val injectScript = "$playerTools\ninstallLayarPlayer($toolOptions);"
 
         fun injectTools() {
             webView.evaluateJavascript(injectScript, null)
         }
 
         webView.webViewClient = object : WebViewClient() {
+            private fun isAllowedNavigation(uri: Uri): Boolean {
+                val host = uri.host?.lowercase() ?: return false
+                val path = uri.path ?: ""
+                val allowedHost = Uri.parse(IdlixClient.SOURCE).host?.lowercase() ?: ""
+
+                if (host != allowedHost && !host.endsWith(".$allowedHost")) {
+                    return false
+                }
+                return path.startsWith("/movie/") || path.startsWith("/series/")
+            }
+
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val uri = request?.url ?: return false
+                if (request.isForMainFrame) {
+                    if (!isAllowedNavigation(uri)) {
+                        return true
+                    }
+                } else {
+                    val host = uri.host?.lowercase() ?: ""
+                    val isAd = AD_HOSTS.any { host == it || host.endsWith(".$it") }
+                    if (isAd) {
+                        return true
+                    }
+                }
+                return false
+            }
+
+            @Suppress("DEPRECATION")
+            @Deprecated("Deprecated in Java")
+            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                val uri = if (url != null) Uri.parse(url) else return false
+                if (!isAllowedNavigation(uri)) {
+                    return true
+                }
+                return false
+            }
+
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                if (!blockAds) return null
                 val urlStr = request?.url?.toString() ?: return null
                 val uri = Uri.parse(urlStr)
                 val host = uri.host?.lowercase() ?: ""
@@ -214,6 +209,30 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         webView.webChromeClient = object : WebChromeClient() {
+            override fun onCreateWindow(
+                view: WebView?,
+                isDialog: Boolean,
+                isUserGesture: Boolean,
+                resultMsg: Message?
+            ): Boolean {
+                return false
+            }
+
+            override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                result?.cancel()
+                return true
+            }
+
+            override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                result?.cancel()
+                return true
+            }
+
+            override fun onJsPrompt(view: WebView?, url: String?, message: String?, defaultValue: String?, result: JsPromptResult?): Boolean {
+                result?.cancel()
+                return true
+            }
+
             override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
                 if (customView != null) {
                     callback?.onCustomViewHidden()
@@ -232,11 +251,7 @@ class PlayerActivity : AppCompatActivity() {
             }
 
             override fun onHideCustomView() {
-                if (customView == null) return
-                (window.decorView as? ViewGroup)?.removeView(customView)
-                customView = null
-                customCallback?.onCustomViewHidden()
-                webView.visibility = View.VISIBLE
+                hideCustomView()
             }
 
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
@@ -298,7 +313,7 @@ class PlayerActivity : AppCompatActivity() {
             }
             KeyEvent.KEYCODE_BACK -> {
                 if (customView != null) {
-                    webView.webChromeClient?.onHideCustomView()
+                    hideCustomView()
                     return true
                 }
                 finish()
@@ -308,7 +323,17 @@ class PlayerActivity : AppCompatActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
+    private fun hideCustomView() {
+        if (customView == null) return
+        (window.decorView as? ViewGroup)?.removeView(customView)
+        customView = null
+        customCallback?.onCustomViewHidden()
+        customCallback = null
+        webView.visibility = View.VISIBLE
+    }
+
     override fun onDestroy() {
+        hideCustomView()
         super.onDestroy()
         webView.destroy()
     }

@@ -12,7 +12,7 @@ import org.json.JSONObject
 class AndroidBridge(
     private val activity: Activity,
     private val webView: WebView,
-    private val idlixClient: IdlixClient
+    private val launchPlayer: (String) -> Unit
 ) {
     private val prefs = activity.getSharedPreferences("layar_prefs", Context.MODE_PRIVATE)
 
@@ -50,10 +50,7 @@ class AndroidBridge(
     @JavascriptInterface
     fun play(jsonOptions: String) {
         activity.runOnUiThread {
-            val intent = Intent(activity, PlayerActivity::class.java).apply {
-                putExtra(PlayerActivity.EXTRA_OPTIONS, jsonOptions)
-            }
-            activity.startActivity(intent)
+            launchPlayer(jsonOptions)
         }
     }
 
