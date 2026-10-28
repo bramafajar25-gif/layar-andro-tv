@@ -85,7 +85,8 @@ const runtime = n => n ? (n >= 60 ? `${Math.floor(n / 60)} ${i18n.language === '
 const saved = item => storage.get('list', []).some(x => keyOf(x) === keyOf(item));
 const historyOf = item => storage.get('history', []).find(x => keyOf(x.item) === keyOf(item));
 let viewToken = 0, detailToken = 0, episodeToken = 0, playerEpisodeToken = 0;
-let currentTab = 'home', currentQuery = '', homeData, detail, playback, focusBeforeModal, searchTimer, toastTimer;
+let currentTab = 'home', currentQuery = '', homeData, detail, playback, focusBeforeModal, searchTimer, toastTimer, heroTimer;
+function clearHeroTimer() { if (heroTimer) { clearTimeout(heroTimer); heroTimer = null; } }
 let sidebarSeason = 0;
 let settingsToken = 0, capabilityPromise, streamFormats = {}, externalPlaying = false, lastPlayerStatus;
 function qualityLabel(height) { return height >= 2160 ? '4K UHD' : height >= 1080 ? '1080p' : height ? height + 'p' : ''; }
@@ -153,42 +154,165 @@ function makeRow(title, items, opts = {}) {
   return section;
 }
 function renderHero(items) {
+  clearHeroTimer();
   const hero = element('section', 'hero');
-  const pool = items.filter(x => x.backdrop).slice(0, 6);
+  const pool = items.filter(x => x.backdrop).slice(0, 5);
   if (!pool.length) return hero;
-  function show(index) {
-    const item = pool[index];
+  let currentIndex = 0;
+  let isPaused = false;
+
+  hero.innerHTML = `
+    <div class="hero-bg-wrap">
+      <img class="hero-image active" src="${image(pool[0].backdrop, 'w1280')}" alt="" fetchpriority="high">
+    </div>
+    <div class="hero-vignette"></div>
+    <div class="hero-content"></div>
+    <div class="hero-maturity"><span></span></div>
+    <div class="hero-bottom">
+      <div class="hero-dots">${pool.map((_, i) => `<button data-slide="${i}" class="${i === 0 ? 'active' : ''}" aria-label="${t("Pilihan")} ${i + 1}" aria-pressed="${i === 0}"></button>`).join('')}</div>
+      <span class="hero-source">${t("KATALOG IDLIX")}</span>
+    </div>`;
+
+  const bgWrap = hero.querySelector('.hero-bg-wrap');
+  const contentEl = hero.querySelector('.hero-content');
+  const maturitySpan = hero.querySelector('.hero-maturity span');
+  const dots = hero.querySelectorAll('[data-slide]');
+
+  function updateContent(item) {
     const maturity = item.rating ? (item.rating >= 7.5 ? '18+' : (item.rating >= 6 ? '13+' : 'SU')) : '13+';
     const tagline = item.genres?.length ? item.genres.slice(0, 2).join(' • ') : (item.type === 'tv_series' ? t("Series Populer") : t("Film Populer"));
-    hero.innerHTML = `
-      <img class="hero-image" src="${image(item.backdrop, 'w1280')}" alt="" fetchpriority="high">
-      <div class="hero-vignette"></div>
-      <div class="hero-content">
-        <div class="hero-kicker"><span class="hero-monogram">L</span> <span class="hero-type-tag">${typeLabel(item)}</span></div>
-        <div class="hero-title">${image(item.logo) ? `<img class="hero-logo" src="${image(item.logo, 'w500')}" alt="${esc(item.title)}">` : `<h1>${esc(item.title)}</h1>`}</div>
-        <div class="hero-meta">${metadata(item)}</div>
-        <div class="hero-tagline">${icon('sparkle')}<span>${esc(tagline)}</span></div>
-        <p class="hero-overview">${esc(item.overview || t("Temukan cerita berikutnya buat ditonton malam ini."))}</p>
-        <div class="btns">
-          <button class="btn primary hero-play" data-action="play">${icon('play')} <span>${item.type === 'tv_series' ? t("Pilih episode") : t("Putar")}</span></button>
-          <button class="btn secondary hero-info" data-action="detail">${icon('info')} <span>${t("Info lainnya")}</span></button>
-          <button class="icon-button hero-save" data-save="${esc(keyOf(item))}" aria-label="${esc(t("Simpan ke Daftarku") + " · " + item.title)}" aria-pressed="${saved(item)}">${listButton(item, true)}</button>
-        </div>
-      </div>
-      <div class="hero-maturity"><span>${maturity}</span></div>
-      <div class="hero-bottom"><div class="hero-dots">${pool.map((_, i) => `<button data-slide="${i}" class="${index === i ? 'active' : ''}" aria-label="${t("Pilihan")} ${i + 1}" aria-pressed="${index === i}"></button>`).join('')}</div><span class="hero-source">${t("KATALOG IDLIX")}</span></div>`;
-    hero.querySelector('.hero-logo')?.addEventListener('error', event => event.target.replaceWith(element('h1', '', esc(item.title))), { once: true });
-    hero.querySelector('[data-action=play]').onclick = async event => {
+    maturitySpan.textContent = maturity;
+
+    contentEl.innerHTML = `
+      <div class="hero-kicker"><span class="hero-monogram">L</span> <span class="hero-type-tag">${typeLabel(item)}</span></div>
+      <div class="hero-title">${image(item.logo) ? `<img class="hero-logo" src="${image(item.logo, 'w500')}" alt="${esc(item.title)}">` : `<h1>${esc(item.title)}</h1>`}</div>
+      <div class="hero-meta">${metadata(item)}</div>
+      <div class="hero-tagline">${icon('sparkle')}<span>${esc(tagline)}</span></div>
+      <p class="hero-overview">${esc(item.overview || t("Temukan cerita berikutnya buat ditonton malam ini."))}</p>
+      <div class="btns">
+        <button class="btn primary hero-play" data-action="play">${icon('play')} <span>${item.type === 'tv_series' ? t("Pilih episode") : t("Putar")}</span></button>
+        <button class="btn secondary hero-info" data-action="detail">${icon('info')} <span>${t("Info lainnya")}</span></button>
+        <button class="icon-button hero-save" data-save="${esc(keyOf(item))}" aria-label="${esc(t("Simpan ke Daftarku") + " · " + item.title)}" aria-pressed="${saved(item)}">${listButton(item, true)}</button>
+      </div>`;
+
+    contentEl.querySelector('.hero-logo')?.addEventListener('error', event => event.target.replaceWith(element('h1', '', esc(item.title))), { once: true });
+    contentEl.querySelector('[data-action=play]').onclick = async event => {
       if (item.type === 'tv_series') return openDetail(item, true);
       const button = event.currentTarget; button.disabled = true;
       try { const movie = await api('movies/' + item.slug); if (!movie.hasVideo) return toast(t("Video belum tersedia dari sumber.")); await startPlayback(movie); }
       catch (error) { toast(errorText(error)); } finally { button.disabled = false; }
     };
-    hero.querySelector('[data-action=detail]').onclick = () => openDetail(item);
-    hero.querySelector('[data-save]').onclick = () => toggleList(item);
-    hero.querySelectorAll('[data-slide]').forEach(button => { button.onclick = () => show(Number(button.dataset.slide)); });
+    contentEl.querySelector('[data-action=detail]').onclick = () => openDetail(item);
+    contentEl.querySelector('[data-save]').onclick = () => toggleList(item);
   }
-  show(0); return hero;
+
+  function updateDots(index) {
+    dots.forEach((btn, i) => {
+      const isActive = i === index;
+      if (isActive && btn.classList.contains('active')) {
+        btn.classList.remove('active');
+        void btn.offsetWidth;
+      }
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-pressed', isActive);
+    });
+  }
+
+  function show(index, instant = false) {
+    if (index < 0 || index >= pool.length) return;
+    if (index === currentIndex && !instant) return;
+    currentIndex = index;
+    const item = pool[currentIndex];
+
+    updateDots(currentIndex);
+
+    if (instant) {
+      updateContent(item);
+      const activeImg = bgWrap.querySelector('.hero-image');
+      if (activeImg) activeImg.src = image(item.backdrop, 'w1280');
+      startTimer();
+      return;
+    }
+
+    contentEl.classList.add('hero-content-exit');
+    setTimeout(() => {
+      updateContent(item);
+      contentEl.classList.remove('hero-content-exit');
+      contentEl.classList.add('hero-content-enter');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          contentEl.classList.remove('hero-content-enter');
+        });
+      });
+    }, 280);
+
+    const newImg = document.createElement('img');
+    newImg.className = 'hero-image incoming';
+    newImg.alt = '';
+    newImg.src = image(item.backdrop, 'w1280');
+    newImg.onload = () => {
+      bgWrap.append(newImg);
+      requestAnimationFrame(() => {
+        newImg.classList.add('active');
+        newImg.classList.remove('incoming');
+        const oldImgs = bgWrap.querySelectorAll('.hero-image:not(.incoming)');
+        oldImgs.forEach(img => {
+          if (img !== newImg) {
+            img.classList.remove('active');
+            img.classList.add('fading-out');
+            setTimeout(() => img.remove(), 850);
+          }
+        });
+      });
+    };
+    newImg.onerror = () => { newImg.remove(); };
+
+    startTimer();
+  }
+
+  function startTimer() {
+    clearHeroTimer();
+    if (pool.length <= 1) return;
+    heroTimer = setTimeout(() => {
+      if (!isPaused && document.contains(hero)) {
+        show((currentIndex + 1) % pool.length);
+      } else if (document.contains(hero)) {
+        startTimer();
+      }
+    }, 5000);
+  }
+
+  dots.forEach(btn => {
+    btn.onclick = () => {
+      show(Number(btn.dataset.slide));
+    };
+  });
+
+  hero.addEventListener('mouseenter', () => {
+    isPaused = true;
+    hero.classList.add('hero-paused');
+  });
+  hero.addEventListener('mouseleave', () => {
+    isPaused = false;
+    hero.classList.remove('hero-paused');
+    updateDots(currentIndex);
+    startTimer();
+  });
+  hero.addEventListener('focusin', () => {
+    isPaused = true;
+    hero.classList.add('hero-paused');
+  });
+  hero.addEventListener('focusout', (e) => {
+    if (!hero.contains(e.relatedTarget)) {
+      isPaused = false;
+      hero.classList.remove('hero-paused');
+      updateDots(currentIndex);
+      startTimer();
+    }
+  });
+
+  show(0, true);
+  return hero;
 }
 function showPageError(container, error, retry) {
   container.innerHTML = `<section class="status-panel"><span class="eyebrow">LAYAR · IDLIX</span><h1>${t("Belum bisa terhubung.")}</h1><p>${esc(errorText(error))}</p><div class="btns"><button class="btn primary" data-retry>${t("Coba lagi")}</button><button class="btn" data-source>${t("Buka IDLIX ↗")}</button></div></section>`;
@@ -256,6 +380,7 @@ function gridPage(token, { title, subtitle, fetchPage, sort = false, items }) {
   else load();
 }
 function render() {
+  clearHeroTimer();
   const token = ++viewToken;
   document.body.classList.toggle('catalog-view', !!currentQuery || currentTab !== 'home');
   $('#main').setAttribute('aria-busy', 'true');
@@ -344,6 +469,7 @@ function updateBounds() {
   desktop.bounds({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
 }
 async function startPlayback(item, season, episode) {
+  clearHeroTimer();
   if (!desktop) { openExternal({ type: item.type, slug: item.slug, season, episode: episode?.number }); toast(t("Player di dalam Layar tersedia lewat Layar.vbs.")); return; }
   if (item.type === 'tv_series' && (!episode || !episode.available)) return;
   const wasPlaying = !!playback;
