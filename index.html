@@ -46,6 +46,10 @@
   <svg class="svg-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 13 8-13 8z" fill="currentColor" stroke="none"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+    <symbol id="i-series" viewBox="0 0 24 24"><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><rect width="20" height="20" x="2" y="2" rx="2.18" ry="2.18"/><line x1="7" x2="7" y1="2" y2="22"/><line x1="17" x2="17" y1="2" y2="22"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="2" x2="7" y1="7" y2="7"/><line x1="2" x2="7" y1="17" y2="17"/><line x1="17" x2="22" y1="17" y2="17"/><line x1="17" x2="22" y1="7" y2="7"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="m12 3 1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3z"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L20 5"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
@@ -56,20 +60,42 @@
     <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5h6l2 2h10v13H3z"/></symbol>
     <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M5 3v7m0 4v7M12 3v11m0 4v3M19 3v3m0 4v11M2 10h6m1 4h6m1-8h6"/></symbol>
   </defs></svg>
-  <header id="nav">
-    <button class="wordmark" id="home" aria-label="Layar, kembali ke beranda" data-i18n-aria-label="Layar, kembali ke beranda">LAYAR</button>
-    <nav aria-label="Navigasi utama" data-i18n-aria-label="Navigasi utama">
-      <button data-tab="home" class="active" aria-current="page" data-i18n="Beranda">Beranda</button>
-      <button data-tab="tv_series" data-i18n="Series">Series</button>
-      <button data-tab="movie" data-i18n="Film">Film</button>
-      <button data-tab="list" data-i18n="Daftarku">Daftarku</button>
+  <header id="nav" class="netflix-nav">
+    <div class="nav-brand">
+      <button class="wordmark" id="home" aria-label="Layar, kembali ke beranda" data-i18n-aria-label="Layar, kembali ke beranda">
+        <span class="brand-monogram">L</span>
+        <span class="brand-text">LAYAR</span>
+      </button>
+    </div>
+    <div class="nav-search-wrap">
+      <div class="search" id="searchContainer" title="Cari judul · /" data-i18n-title="Cari judul · /" role="search">
+        <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="search" type="search" placeholder="Film, series, dan lainnya" data-i18n-placeholder="Film, series, dan lainnya" aria-label="Cari film atau series" data-i18n-aria-label="Cari film atau series" autocomplete="off">
+      </div>
+    </div>
+    <nav class="nav-menu" aria-label="Navigasi utama" data-i18n-aria-label="Navigasi utama">
+      <button data-tab="home" class="nav-item active" aria-current="page">
+        <svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>
+        <span class="nav-label" data-i18n="Beranda">Beranda</span>
+      </button>
+      <button data-tab="tv_series" class="nav-item">
+        <svg class="icon" aria-hidden="true"><use href="#i-series"/></svg>
+        <span class="nav-label" data-i18n="Series">Series</span>
+      </button>
+      <button data-tab="movie" class="nav-item">
+        <svg class="icon" aria-hidden="true"><use href="#i-film"/></svg>
+        <span class="nav-label" data-i18n="Film">Film</span>
+      </button>
+      <button data-tab="list" class="nav-item">
+        <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>
+        <span class="nav-label" data-i18n="Daftarku">Daftarku</span>
+      </button>
     </nav>
     <div class="nav-end">
       <select id="language" class="language-select" aria-label="Bahasa tampilan" data-i18n-aria-label="Bahasa tampilan" title="Bahasa tampilan" data-i18n-title="Bahasa tampilan"><option value="id">ID</option><option value="en">EN</option></select>
-      <div class="search" id="searchContainer" title="Cari judul · /" data-i18n-title="Cari judul · /" role="search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input id="search" type="search" placeholder="Film, series, dan lainnya" data-i18n-placeholder="Film, series, dan lainnya" aria-label="Cari film atau series" data-i18n-aria-label="Cari film atau series" autocomplete="off"></div>
-      <button id="openFile" class="nav-icon" title="Buka file video di mpv" data-i18n-title="Buka file video di mpv" aria-label="Buka file video di mpv" data-i18n-aria-label="Buka file video di mpv"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg></button>
-      <button id="cinemaSettings" class="nav-icon" title="Kualitas video dan audio" data-i18n-title="Kualitas video dan audio" aria-label="Kualitas video dan audio" data-i18n-aria-label="Kualitas video dan audio"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg></button>
-      <button id="settings" class="profile" title="Pengaturan Layar" data-i18n-title="Pengaturan Layar" aria-label="Pengaturan Layar" data-i18n-aria-label="Pengaturan Layar"><span class="profile-face" aria-hidden="true"></span></button>
+      <button id="openFile" class="nav-icon" title="Buka file video di mpv" data-i18n-title="Buka file video di mpv" aria-label="Buka file video di mpv" data-i18n-aria-label="Buka file video di mpv"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span class="nav-label" data-i18n="Buka File">Buka File</span></button>
+      <button id="cinemaSettings" class="nav-icon" title="Kualitas video dan audio" data-i18n-title="Kualitas video dan audio" aria-label="Kualitas video dan audio" data-i18n-aria-label="Kualitas video dan audio"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg><span class="nav-label" data-i18n="Audio & Kualitas">Audio</span></button>
+      <button id="settings" class="profile" title="Pengaturan Layar" data-i18n-title="Pengaturan Layar" aria-label="Pengaturan Layar" data-i18n-aria-label="Pengaturan Layar"><span class="profile-face" aria-hidden="true"></span><span class="nav-label" data-i18n="Pengaturan Layar">Pengaturan</span></button>
     </div>
   </header>
   <main id="main" aria-busy="true"></main>

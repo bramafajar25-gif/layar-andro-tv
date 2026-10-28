@@ -127,11 +127,12 @@ function toggleList(item) {
   document.querySelectorAll('[data-save]').forEach(button => { if (button.dataset.save === keyOf(item)) { button.innerHTML = listButton(item, button.classList.contains('icon-button')); button.setAttribute('aria-pressed', String(!exists)); } });
   toast(exists ? t("Dihapus dari Daftarku") : t("Ditambahkan ke Daftarku"));
 }
-function card(item, recent, landscape = false) {
+function card(item, recent, landscape = false, rank = null) {
   const button = element('button', 'card' + (landscape ? ' landscape-card' : ''));
   button.title = `${item.title}${item.year ? ' (' + item.year + ')' : ''}`;
   const src = image(landscape ? item.backdrop || item.poster : item.poster, landscape ? 'w500' : 'w342');
-  button.innerHTML = `<div class="card-art">${src ? `<img src="${src}" alt="${esc(item.title)}" loading="lazy" decoding="async">` : `<span class="no-image">${esc(item.title)}</span>`}<span class="card-type">${landscape ? `<b>L</b>` : typeLabel(item)}</span><span class="card-shade"></span>${landscape ? `<span class="card-overlay-title">${esc(item.title)}</span>` : ''}<span class="card-play">${icon('play')}</span>${recent?.episode ? `<span class="recent-tag">S${recent.season} · E${recent.episode}</span>` : ''}</div><span class="card-caption">${esc(item.title)}</span><span class="card-meta"><span>${esc(item.year)}</span>${item.rating ? `<span class="score">★ ${item.rating.toFixed(1)}</span>` : ''}<span>${item.type === 'tv_series' ? t("Series") : t("Film")}</span></span>`;
+  const topBadge = rank ? `<span class="card-rank-badge">TOP 10</span>` : '';
+  button.innerHTML = `<div class="card-art">${src ? `<img src="${src}" alt="${esc(item.title)}" loading="lazy" decoding="async">` : `<span class="no-image">${esc(item.title)}</span>`}<span class="card-type">${landscape ? `<b>L</b>` : typeLabel(item)}</span>${topBadge}<span class="card-shade"></span>${landscape ? `<span class="card-overlay-title">${esc(item.title)}</span>` : ''}<span class="card-play">${icon('play')}</span>${recent?.episode ? `<span class="recent-tag">S${recent.season} · E${recent.episode}</span>` : ''}</div><span class="card-caption">${esc(item.title)}</span><span class="card-meta"><span>${esc(item.year)}</span>${item.rating ? `<span class="score">★ ${item.rating.toFixed(1)}</span>` : ''}<span>${item.type === 'tv_series' ? t("Series") : t("Film")}</span></span>`;
   button.setAttribute('aria-label', recent?.episode ? t("{title}, terakhir Season {season} Episode {episode}", { title: item.title, season: recent.season, episode: recent.episode }) : item.title);
   button.querySelector('img')?.addEventListener('error', event => { event.target.replaceWith(element('span', 'no-image', esc(item.title))); }, { once: true });
   button.onclick = () => openDetail(item);
@@ -142,17 +143,36 @@ function makeRow(title, items, opts = {}) {
   const section = element('section', 'row');
   section.innerHTML = `<div class="row-heading"><h2>${esc(title)}</h2><div class="row-tools"><button data-dir="-1" aria-label="${esc(t("Geser {title} ke kiri", { title }))}">‹</button><button data-dir="1" aria-label="${esc(t("Geser {title} ke kanan", { title }))}">›</button></div></div><div class="track"></div>`;
   const track = section.querySelector('.track');
-  items.forEach(item => track.append(card(item, opts.history?.find(x => keyOf(x.item) === keyOf(item)), true)));
+  const isTrending = /ramai|populer|trending|pilihan/i.test(title);
+  items.forEach((item, idx) => track.append(card(item, opts.history?.find(x => keyOf(x.item) === keyOf(item)), true, isTrending && idx < 10 ? (idx + 1) : null)));
   section.querySelectorAll('[data-dir]').forEach(button => { button.onclick = () => track.scrollBy({ left: Number(button.dataset.dir) * track.clientWidth * .8, behavior: 'smooth' }); });
   return section;
 }
 function renderHero(items) {
   const hero = element('section', 'hero');
-  const pool = items.filter(x => x.backdrop).slice(0, 5);
+  const pool = items.filter(x => x.backdrop).slice(0, 6);
   if (!pool.length) return hero;
   function show(index) {
     const item = pool[index];
-    hero.innerHTML = `<img class="hero-image" src="${image(item.backdrop, 'w1280')}" alt="" fetchpriority="high"><div class="hero-content"><div class="hero-kicker"><span class="hero-monogram">L</span> ${typeLabel(item)}</div><div class="hero-title">${image(item.logo) ? `<img class="hero-logo" src="${image(item.logo, 'w500')}" alt="${esc(item.title)}">` : `<h1>${esc(item.title)}</h1>`}</div><div class="hero-meta">${metadata(item)}</div><p class="hero-overview">${esc(item.overview || t("Temukan cerita berikutnya buat ditonton malam ini."))}</p><div class="btns"><button class="btn primary" data-action="play">${icon('play')} ${item.type === 'tv_series' ? t("Pilih episode") : t("Putar")}</button><button class="btn secondary" data-action="detail">${icon('info')} ${t("Info lainnya")}</button><button class="icon-button" data-save="${esc(keyOf(item))}" aria-label="${esc(t("Simpan ke Daftarku") + " · " + item.title)}" aria-pressed="${saved(item)}">${listButton(item, true)}</button></div></div><div class="hero-bottom"><div class="hero-dots">${pool.map((_, i) => `<button data-slide="${i}" class="${index === i ? 'active' : ''}" aria-label="${t("Pilihan")} ${i + 1}" aria-pressed="${index === i}"></button>`).join('')}</div><span class="hero-source">${t("KATALOG IDLIX")}</span></div>`;
+    const maturity = item.rating ? (item.rating >= 7.5 ? '18+' : (item.rating >= 6 ? '13+' : 'SU')) : '13+';
+    const tagline = item.genres?.length ? item.genres.slice(0, 2).join(' • ') : (item.type === 'tv_series' ? t("Series Populer") : t("Film Populer"));
+    hero.innerHTML = `
+      <img class="hero-image" src="${image(item.backdrop, 'w1280')}" alt="" fetchpriority="high">
+      <div class="hero-vignette"></div>
+      <div class="hero-content">
+        <div class="hero-kicker"><span class="hero-monogram">L</span> <span class="hero-type-tag">${typeLabel(item)}</span></div>
+        <div class="hero-title">${image(item.logo) ? `<img class="hero-logo" src="${image(item.logo, 'w500')}" alt="${esc(item.title)}">` : `<h1>${esc(item.title)}</h1>`}</div>
+        <div class="hero-meta">${metadata(item)}</div>
+        <div class="hero-tagline">${icon('sparkle')}<span>${esc(tagline)}</span></div>
+        <p class="hero-overview">${esc(item.overview || t("Temukan cerita berikutnya buat ditonton malam ini."))}</p>
+        <div class="btns">
+          <button class="btn primary hero-play" data-action="play">${icon('play')} <span>${item.type === 'tv_series' ? t("Pilih episode") : t("Putar")}</span></button>
+          <button class="btn secondary hero-info" data-action="detail">${icon('info')} <span>${t("Info lainnya")}</span></button>
+          <button class="icon-button hero-save" data-save="${esc(keyOf(item))}" aria-label="${esc(t("Simpan ke Daftarku") + " · " + item.title)}" aria-pressed="${saved(item)}">${listButton(item, true)}</button>
+        </div>
+      </div>
+      <div class="hero-maturity"><span>${maturity}</span></div>
+      <div class="hero-bottom"><div class="hero-dots">${pool.map((_, i) => `<button data-slide="${i}" class="${index === i ? 'active' : ''}" aria-label="${t("Pilihan")} ${i + 1}" aria-pressed="${index === i}"></button>`).join('')}</div><span class="hero-source">${t("KATALOG IDLIX")}</span></div>`;
     hero.querySelector('.hero-logo')?.addEventListener('error', event => event.target.replaceWith(element('h1', '', esc(item.title))), { once: true });
     hero.querySelector('[data-action=play]').onclick = async event => {
       if (item.type === 'tv_series') return openDetail(item, true);
@@ -498,53 +518,117 @@ function initNetflixIntro() {
   const splash = $('#introSplash');
   if (!splash) return;
 
+  let audioStarted = false;
   function playIntroTaDum() {
+    if (audioStarted) return;
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
-      if (ctx.state === 'suspended') {
-        ctx.resume().catch(() => {});
+
+      const runTaDum = () => {
+        if (audioStarted) return;
+        audioStarted = true;
+        const now = ctx.currentTime;
+        const t0 = now + 0.03;
+
+        // 1. Transient Click / Percussion strike (the sharp "Ta")
+        const clickOsc = ctx.createOscillator();
+        const clickGain = ctx.createGain();
+        clickOsc.type = 'sine';
+        clickOsc.frequency.setValueAtTime(1600, t0);
+        clickOsc.frequency.exponentialRampToValueAtTime(180, t0 + 0.04);
+        clickGain.gain.setValueAtTime(0.35, t0);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.045);
+        clickOsc.connect(clickGain);
+        clickGain.connect(ctx.destination);
+        clickOsc.start(t0);
+        clickOsc.stop(t0 + 0.05);
+
+        // Sub kick strike
+        const kickOsc = ctx.createOscillator();
+        const kickGain = ctx.createGain();
+        kickOsc.type = 'triangle';
+        kickOsc.frequency.setValueAtTime(150, t0);
+        kickOsc.frequency.exponentialRampToValueAtTime(42, t0 + 0.12);
+        kickGain.gain.setValueAtTime(0.6, t0);
+        kickGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.14);
+        kickOsc.connect(kickGain);
+        kickGain.connect(ctx.destination);
+        kickOsc.start(t0);
+        kickOsc.stop(t0 + 0.15);
+
+        // 2. Cinematic D-Minor Chord Swell (the signature "DUM" at t0 + 0.09s)
+        const t1 = t0 + 0.09;
+
+        // Deep sub fundamental D1 (36.7Hz) & D2 (73.4Hz)
+        const subOsc = ctx.createOscillator();
+        const subGain = ctx.createGain();
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(73.42, t1);
+        subOsc.frequency.exponentialRampToValueAtTime(36.71, t1 + 0.45);
+        subGain.gain.setValueAtTime(0.001, t1);
+        subGain.gain.linearRampToValueAtTime(0.65, t1 + 0.07);
+        subGain.gain.exponentialRampToValueAtTime(0.001, t1 + 2.0);
+        subOsc.connect(subGain);
+        subGain.connect(ctx.destination);
+        subOsc.start(t1);
+        subOsc.stop(t1 + 2.1);
+
+        // Cinematic Chord Harmonics with detuning & resonant sweep
+        const chordTones = [
+          { f: 73.42, type: 'sawtooth', vol: 0.28, detune: -5 },
+          { f: 110.0, type: 'sawtooth', vol: 0.25, detune: 6 },
+          { f: 146.83, type: 'triangle', vol: 0.26, detune: -3 },
+          { f: 174.61, type: 'sawtooth', vol: 0.20, detune: 5 }, // Iconic minor third tension
+          { f: 220.0, type: 'triangle', vol: 0.16, detune: -4 },
+          { f: 293.66, type: 'sine', vol: 0.12, detune: 3 }
+        ];
+
+        chordTones.forEach(tone => {
+          const osc = ctx.createOscillator();
+          const filter = ctx.createBiquadFilter();
+          const gain = ctx.createGain();
+
+          osc.type = tone.type;
+          osc.frequency.setValueAtTime(tone.f, t1);
+          osc.detune.setValueAtTime(tone.detune, t1);
+
+          filter.type = 'lowpass';
+          filter.Q.setValueAtTime(3.2, t1);
+          filter.frequency.setValueAtTime(380, t1);
+          filter.frequency.exponentialRampToValueAtTime(2600, t1 + 0.26); // Bright bloom
+          filter.frequency.exponentialRampToValueAtTime(130, t1 + 2.1);  // Dark warm decay
+
+          gain.gain.setValueAtTime(0.001, t1);
+          gain.gain.linearRampToValueAtTime(tone.vol, t1 + 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, t1 + 2.2);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc.start(t1);
+          osc.stop(t1 + 2.3);
+        });
+      };
+
+      if (ctx.state === 'running') {
+        runTaDum();
+      } else {
+        ctx.resume().then(() => {
+          if (ctx.state === 'running') runTaDum();
+        }).catch(() => {});
+        const unlock = () => {
+          ctx.resume().then(() => {
+            if (ctx.state === 'running') runTaDum();
+          }).catch(() => {});
+          window.removeEventListener('pointerdown', unlock);
+          window.removeEventListener('keydown', unlock);
+        };
+        window.addEventListener('pointerdown', unlock, { once: true });
+        window.addEventListener('keydown', unlock, { once: true });
       }
-      const now = ctx.currentTime;
-
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(105, now + 0.05);
-      osc1.frequency.exponentialRampToValueAtTime(38, now + 0.35);
-      gain1.gain.setValueAtTime(0.35, now + 0.05);
-      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.start(now + 0.05);
-      osc1.stop(now + 0.4);
-
-      const freqs = [55, 110, 164.8, 220];
-      freqs.forEach((f, idx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const filter = ctx.createBiquadFilter();
-
-        osc.type = idx === 0 ? 'sine' : 'sawtooth';
-        osc.frequency.setValueAtTime(f, now + 0.28);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(900, now + 0.28);
-        filter.frequency.exponentialRampToValueAtTime(160, now + 1.6);
-
-        const vol = idx === 0 ? 0.38 : 0.11;
-        gain.gain.setValueAtTime(0.001, now + 0.28);
-        gain.gain.linearRampToValueAtTime(vol, now + 0.33);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.75);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.start(now + 0.28);
-        osc.stop(now + 1.8);
-      });
     } catch (_) {}
   }
 
@@ -560,7 +644,7 @@ function initNetflixIntro() {
     }, 550);
   }
 
-  setTimeout(dismissSplash, 1850);
+  setTimeout(dismissSplash, 1950);
   splash.addEventListener('click', dismissSplash);
   window.addEventListener('keydown', () => {
     if (!dismissed) dismissSplash();

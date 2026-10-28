@@ -13,6 +13,7 @@ const HOME = pathToFileURL(path.join(ROOT, 'index.html')).href;
 fs.mkdirSync(path.join(ROOT, '.runtime', 'profile'), { recursive: true });
 app.setPath('userData', path.join(ROOT, '.runtime', 'profile'));
 app.setName('Layar');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 let win, player, rect, playerGeneration = 0, monitor, streamURL = '', streamMetadata = {}, nativeProcess;
 const settingsPath = path.join(ROOT, '.runtime', 'profile', 'playback.json');
 let settings = { quality: 'auto', blockAds: true, passthrough: false, nativePath: '', language: 'id' };
@@ -183,7 +184,7 @@ ipcMain.handle('layar:fullscreen', event => { trusted(event); win.setFullScreen(
 ipcMain.handle('layar:open-source', (event, options) => { trusted(event); return shell.openExternal(options ? playbackUrl(options) : SOURCE); });
 
 async function createWindow() {
-  win = new BrowserWindow({ width: 1440, height: 920, minWidth: 900, minHeight: 640, backgroundColor: '#141414', title: 'Layar · Film & Series', icon: path.join(ROOT, 'layar.ico'), autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true } });
+  win = new BrowserWindow({ width: 1440, height: 920, minWidth: 900, minHeight: 640, backgroundColor: '#141414', title: 'Layar · Film & Series', icon: path.join(ROOT, 'layar.ico'), autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, autoplayPolicy: 'no-user-gesture-required' } });
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (event, url) => { if (url !== HOME) event.preventDefault(); });
   win.on('resize', fitPlayer);
