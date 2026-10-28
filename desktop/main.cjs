@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, WebContentsView, ipcMain, net, shell, dialog } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, net, shell, dialog, nativeTheme } = require('electron');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -14,6 +14,7 @@ fs.mkdirSync(path.join(ROOT, '.runtime', 'profile'), { recursive: true });
 app.setPath('userData', path.join(ROOT, '.runtime', 'profile'));
 app.setName('Layar');
 app.setAppUserModelId('com.layar.app');
+nativeTheme.themeSource = 'dark';
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 let win, player, rect, playerGeneration = 0, monitor, streamURL = '', streamMetadata = {}, nativeProcess;
 const settingsPath = path.join(ROOT, '.runtime', 'profile', 'playback.json');
@@ -185,9 +186,43 @@ ipcMain.handle('layar:fullscreen', event => { trusted(event); win.setFullScreen(
 ipcMain.handle('layar:open-source', (event, options) => { trusted(event); return shell.openExternal(options ? playbackUrl(options) : SOURCE); });
 
 async function createWindow() {
-  win = new BrowserWindow({ width: 1440, height: 920, minWidth: 900, minHeight: 640, backgroundColor: '#141414', title: 'Layar · Film & Series', icon: path.join(ROOT, 'layar.ico'), autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, autoplayPolicy: 'no-user-gesture-required' } });
+  win = new BrowserWindow({
+    width: 1440,
+    height: 920,
+    minWidth: 900,
+    minHeight: 640,
+    backgroundColor: '#141414',
+    fullscreen: true,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#141414',
+      symbolColor: '#ffffff',
+      height: 32
+    },
+    title: 'Layar · Film & Series',
+    icon: path.join(ROOT, 'layar.ico'),
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      autoplayPolicy: 'no-user-gesture-required'
+    }
+  });
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (event, url) => { if (url !== HOME) event.preventDefault(); });
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return;
+    if (input.key === 'F11') {
+      event.preventDefault();
+      win.setFullScreen(!win.isFullScreen());
+    }
+    if (input.key === 'Escape' && win.isFullScreen()) {
+      event.preventDefault();
+      win.setFullScreen(false);
+    }
+  });
   win.on('resize', fitPlayer);
   win.on('closed', () => { clearInterval(monitor); if (nativeProcess) nativeProcess.kill(); if (player) { player.webContents.close(); player = null; } win = null; });
   await win.loadFile(path.join(ROOT, 'index.html'));
