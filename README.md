@@ -1,19 +1,34 @@
 # Layar 3 · Private Cinema
 
-Aplikasi khusus laptop Windows untuk katalog film dan series IDLIX. Tampilan streaming dengan navigasi atas, banner judul memenuhi lebar layar, dan deretan kartu mendatar. Mendukung Daftarku, pemilihan season/episode, blokir pop-up, lewati iklan otomatis saat tersedia, serta integrasi mpv opsional untuk kualitas tertinggi dan audio passthrough.
+Aplikasi katalog film dan series untuk laptop Windows, HP Android, dan Android TV. UI menyesuaikan perangkat: navigasi atas dan banner sinematik di laptop/TV, navigasi bawah di HP.
 
-Klik dua kali **Layar.vbs**. Tidak perlu server Android atau API key. Untuk pemasangan komponen pertama:
+## Download sesuai perangkat
+
+Buka [halaman Releases](https://github.com/bramafajar25-gif/layar-andro-tv/releases/latest), lalu pilih file di bagian **Assets**:
+
+| Perangkat | File download | Cara menjalankan |
+| --- | --- | --- |
+| Laptop Windows x64 | `Layar-Windows-Laptop-v3.0.3-x64.zip` | Ekstrak seluruh ZIP, buka `Layar.exe`. Tidak perlu Node.js/npm. |
+| HP Android / Android TV | `Layar-Android-TV-Mobile-v3.0.3.apk` | Pasang APK di Android. APK yang sama mendukung HP dan TV. |
+
+Paket Windows dan Android terpisah. Jangan pilih arsip **Source code** untuk pemasangan biasa. Jika release terbaru masih dibuild, cek [progres build](https://github.com/bramafajar25-gif/layar-andro-tv/actions/workflows/build-apk.yml). Release baru diterbitkan setelah kedua paket berhasil dibuat.
+
+APK memakai debug key CI. Jika update APK lama ditolak karena tanda tangan berbeda, instalasi lama perlu dihapus terlebih dahulu (data lokal ikut terhapus).
+
+## Menjalankan source di laptop
+
+Klik dua kali **Layar.vbs** setelah memasang komponen:
 
 ```powershell
 npm.cmd ci
 npm.cmd start
 ```
 
-Panduan lengkap: [dist/desktop/Panduan.md](dist/desktop/Panduan.md).
+Panduan laptop: [dist/desktop/Panduan.md](dist/desktop/Panduan.md). Untuk membuat folder aplikasi Windows portabel dari source pada Windows: `npm.cmd run package:windows`. Output masuk `dist/windows/` dan tidak menyertakan source Android, profil pribadi, atau file marketing.
 
 Pilihan **ID / EN** di navigasi atas atau **Pengaturan → Bahasa tampilan** mengganti bahasa menu tanpa restart dan tersimpan lokal. Bahasa tampilan terpisah dari judul, sinopsis, serta subtitle sumber. Sub Indo tidak dijamin untuk seluruh katalog; pilih Indonesia di menu CC/Subtitle player bila tersedia. Indikator subtitle hanya menyatakan track yang terdeteksi, bukan jaminan untuk judul lain.
 
-Source APK untuk HP dan Android TV tersedia di `android/`. Workflow [Build Android TV APK](.github/workflows/build-apk.yml) menjalankan tes, menyalin aset web, lalu membuat APK debug untuk kedua perangkat. Unduh artifact `Layar-Android-TV-APK` dari build yang berhasil. Android memakai Activity player sendiri; mpv dan pengaturan ukuran player hanya berlaku di desktop.
+Source Android ada di `android/`; source desktop ada di `desktop/`. Workflow [Build Windows and Android Downloads](.github/workflows/build-apk.yml) menjalankan tes, menyalin aset web ke Android, lalu membuat APK dan ZIP Windows dalam job terpisah. Artifact bernama `Layar-Android-TV-Mobile` dan `Layar-Windows-Laptop`. Pada branch `main`, keduanya dipublikasikan bersama di Releases. Android memakai Activity player sendiri; mpv dan pengaturan ukuran player hanya berlaku di desktop.
 
 Pemutaran internal menggunakan Electron WebContentsView terisolasi. Pop-up ditolak; filter iklan dapat dimatikan jika sumber bermasalah. Verifikasi dan waktu tunggu dari server tetap berlaku. Tidak ada file film yang disimpan atau diunduh.
 

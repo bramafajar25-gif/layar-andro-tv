@@ -15,3 +15,8 @@ android/app/src/main/assets/cinema.css
 android/app/src/main/assets/i18n.js
 android/app/src/main/assets/layar.ico
 dist/apk/
+
+# Generated platform downloads and local marketing exports
+dist/windows/
+dist/downloads/
+dist/marketing/

@@ -113,7 +113,7 @@ class MainActivity : AppCompatActivity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             webView.evaluateJavascript(
-                "(function() { var m = document.getElementById('modal'); if (m && !m.classList.contains('hidden')) { var c = m.querySelector('[data-close], .dialog-close'); if (c) c.click(); else m.classList.add('hidden'); return true; } return false; })();"
+                "(function() { var s = document.getElementById('search'); if (s && document.activeElement === s) { s.blur(); AndroidBridge.hideKeyboard(); document.querySelector('[data-tab].active').focus(); return true; } var m = document.getElementById('modal'); if (m && !m.classList.contains('hidden')) { var c = m.querySelector('[data-close], .dialog-close'); if (c) c.click(); else m.classList.add('hidden'); return true; } if (s && s.value) { document.getElementById('home').click(); document.querySelector('[data-tab=home]').focus(); return true; } return false; })();"
             ) { result ->
                 if (result != "true") {
                     finish()

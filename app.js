@@ -365,6 +365,7 @@ function gridPage(token, { title, subtitle, fetchPage, sort = false, items }) {
       for (const item of data.items) { if (!seen.has(keyOf(item))) { seen.add(keyOf(item)); grid.append(card(item)); } }
       pageNumber = nextPage;
       more.classList.toggle('hidden', pageNumber >= data.pages);
+      if (document.activeElement === $('#main')) grid.querySelector('.card')?.focus();
       if (!seen.size) showEmpty(grid, t("Belum ada hasil"), currentQuery ? t("Coba judul asli atau kata kunci yang lebih singkat.") : t("Judul akan muncul di sini saat tersedia."));
     } catch (error) {
       if (token !== viewToken || request !== requestId) return;
@@ -385,7 +386,8 @@ function render() {
   document.body.classList.toggle('catalog-view', !!currentQuery || currentTab !== 'home');
   $('#main').setAttribute('aria-busy', 'true');
   window.scrollTo(0, 0);
-  if (currentQuery) gridPage(token, { title: t("Hasil untuk “{query}”", { query: currentQuery }), subtitle: t("Film dan series dari katalog IDLIX."), fetchPage: page => api('search?' + new URLSearchParams({ q: currentQuery, page, limit: 24 })) });
+  const query = currentQuery;
+  if (query) gridPage(token, { title: t("Hasil untuk “{query}”", { query: currentQuery }), subtitle: t("Film dan series dari katalog IDLIX."), fetchPage: page => api('search?' + new URLSearchParams({ q: query, page, limit: 24 })) });
   else if (currentTab === 'home') renderHome(token);
   else if (currentTab === 'list') gridPage(token, { title: t("Daftarku"), subtitle: t("Cerita yang kamu simpan untuk nanti."), items: storage.get('list', []) });
   else gridPage(token, { title: currentTab === 'movie' ? t("Film") : t("Series"), subtitle: currentTab === 'movie' ? t("Satu film lagi sebelum hari berganti.") : t("Satu episode selalu berujung satu season."), sort: true, fetchPage: (page, sort) => api(`${currentTab === 'movie' ? 'movies' : 'series'}?page=${page}&limit=24&sort=${sort}`) });
@@ -567,29 +569,67 @@ $('#openFile').onclick = async () => {
   try { const result = await desktop.openFile(); if (result.opened) toast(t("File dibuka di mpv.")); }
   catch (error) { toast(errorText(error)); }
 };
-$('#search').addEventListener('input', event => {
-  clearTimeout(searchTimer); ++viewToken;
-  currentQuery = event.target.value.trim();
+const isTv = window.AndroidBridge?.isTelevision?.() === true;
+document.body.classList.toggle('tv-mode', isTv);
+const searchInput = $('#search');
+function updateSearch() {
+  clearTimeout(searchTimer);
+  ++viewToken;
+  currentQuery = searchInput.value.trim();
   searchTimer = setTimeout(render, 350);
+}
+searchInput.addEventListener('input', event => {
+  if (!event.isComposing) updateSearch();
 });
-$('.search')?.addEventListener('click', () => {
-  $('#search').focus();
+searchInput.addEventListener('compositionend', updateSearch);
+$('.search').addEventListener('click', () => {
+  searchInput.focus();
   window.AndroidBridge?.showKeyboard?.();
 });
-$('.search')?.addEventListener('keydown', event => {
-  if (event.key === 'Enter' && event.target !== $('#search')) {
+searchInput.addEventListener('keydown', event => {
+  if (event.isComposing) return;
+  if (event.key === 'Enter') {
     event.preventDefault();
-    $('#search').focus();
-    window.AndroidBridge?.showKeyboard?.();
+    clearTimeout(searchTimer);
+    currentQuery = searchInput.value.trim();
+    window.AndroidBridge?.hideKeyboard?.();
+    $('#main').focus();
+    render();
+  } else if (event.key === 'ArrowDown' || event.key === 'Escape') {
+    const target = event.key === 'ArrowDown' ? $('#main .card:not(.skeleton)') : $('[data-tab].active');
+    if (target) {
+      event.preventDefault();
+      event.stopPropagation();
+      window.AndroidBridge?.hideKeyboard?.();
+      target.focus();
+    }
   }
 });
-$('#search').addEventListener('focus', () => {
-  window.AndroidBridge?.showKeyboard?.();
-});
-$('#search').addEventListener('keydown', event => {
-  if (event.key === 'Enter') {
-    $('#search').blur();
-    window.AndroidBridge?.hideKeyboard?.();
+// Keep directional navigation scoped to the visible screen; text editing stays native.
+document.addEventListener('keydown', event => {
+  if (!isTv || event.defaultPrevented || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+  const active = document.activeElement;
+  if (/INPUT|TEXTAREA|SELECT/.test(active.tagName)) return;
+  const scope = !$('#modal').classList.contains('hidden') ? $('#dialog') : playback ? $('#player') : document;
+  const origin = active.getBoundingClientRect();
+  const horizontal = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
+  const sign = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
+  let best, distance = Infinity;
+  for (const node of scope.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]')) {
+    if (node === active || !node.getClientRects().length) continue;
+    const box = node.getBoundingClientRect();
+    const dx = (box.left + box.right - origin.left - origin.right) / 2;
+    const dy = (box.top + box.bottom - origin.top - origin.bottom) / 2;
+    const forward = (horizontal ? dx : dy) * sign;
+    const cross = Math.abs(horizontal ? dy : dx);
+    if (forward <= 1) continue;
+    const score = forward + cross * 3;
+    if (score < distance) { best = node; distance = score; }
+  }
+  if (best) {
+    event.preventDefault();
+    best.focus();
+    best.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 });
 $('#modal').onclick = event => { if (event.target === $('#modal') || event.target.closest('[data-close]')) closeModal(); };

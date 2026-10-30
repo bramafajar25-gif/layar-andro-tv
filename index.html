@@ -72,7 +72,7 @@
       <div class="nav-search-wrap">
         <div class="search" id="searchContainer" title="Cari judul · /" data-i18n-title="Cari judul · /" role="search">
           <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
-          <input id="search" type="search" placeholder="Film, series, dan lainnya" data-i18n-placeholder="Film, series, dan lainnya" aria-label="Cari film atau series" data-i18n-aria-label="Cari film atau series" autocomplete="off">
+          <input id="search" type="search" enterkeyhint="search" placeholder="Film, series, dan lainnya" data-i18n-placeholder="Film, series, dan lainnya" aria-label="Cari film atau series" data-i18n-aria-label="Cari film atau series" autocomplete="off">
         </div>
       </div>
       <button id="mobileSettings" class="mobile-only-btn profile" title="Pengaturan Layar" data-i18n-title="Pengaturan Layar" aria-label="Pengaturan Layar" data-i18n-aria-label="Pengaturan Layar"><span class="profile-face" aria-hidden="true"></span></button>
@@ -102,7 +102,7 @@
       <button id="settings" class="profile" title="Pengaturan Layar" data-i18n-title="Pengaturan Layar" aria-label="Pengaturan Layar" data-i18n-aria-label="Pengaturan Layar"><span class="profile-face" aria-hidden="true"></span><span class="nav-label" data-i18n="Pengaturan Layar">Pengaturan</span></button>
     </div>
   </header>
-  <main id="main" aria-busy="true"></main>
+  <main tabindex="-1" id="main" aria-busy="true"></main>
   <footer><span class="footer-logo">LAYAR</span><span data-i18n="Film, series, dan waktu buat diri sendiri.">Film, series, dan waktu buat diri sendiri.</span><span class="source-label"><i></i><span data-i18n="Katalog IDLIX">Katalog IDLIX</span></span></footer>
   <div id="modal" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Detail judul" data-i18n-aria-label="Detail judul" tabindex="-1"><div id="dialog" class="dialog"></div></div>
   <section id="player" class="player hidden" aria-label="Player Layar" data-i18n-aria-label="Player Layar">

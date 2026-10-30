@@ -81,12 +81,17 @@ class AndroidBridge(
     }
 
     @JavascriptInterface
+    fun isTelevision(): Boolean {
+        val manager = activity.getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
+        return manager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+    }
+
+    @JavascriptInterface
     fun showKeyboard() {
         activity.runOnUiThread {
             webView.requestFocus()
             val imm = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-            imm?.showSoftInput(webView, InputMethodManager.SHOW_FORCED)
-            imm?.toggleSoftInput(InputMethodManager.SHOW_FORCED, InputMethodManager.HIDE_IMPLICIT_ONLY)
+            imm?.showSoftInput(webView, InputMethodManager.SHOW_IMPLICIT)
         }
     }
 

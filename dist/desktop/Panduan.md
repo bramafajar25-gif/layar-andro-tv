@@ -1,12 +1,14 @@
 # Layar 3 · Private Cinema
 
-Layar sekarang khusus laptop Windows. Buka `Layar.vbs` dari folder utama. APK HP, Android TV, server jaringan Android, SDK, dan Gradle sudah dihapus.
+Panduan ini khusus paket **Windows Laptop**. Ekstrak seluruh `Layar-Windows-Laptop-*.zip` ke folder milikmu, lalu buka `Layar.exe`. Electron sudah disertakan; tidak perlu Node.js/npm. Biarkan folder `resources`, `locales`, dan DLL bersama aplikasi. Untuk menjalankan dari source repository, gunakan `Layar.vbs` setelah `npm.cmd ci`.
+
+Untuk HP atau Android TV, unduh `Layar-Android-TV-Mobile-*.apk` secara terpisah dari [Releases](https://github.com/bramafajar25-gif/layar-andro-tv/releases/latest).
 
 ## Mulai menonton
 
 1. Pilih film dari Beranda atau menu Film di navigasi atas. Tombol **Putar** pada banner langsung membuka player. **Info lainnya** membuka detail judul; kartu beranda berbentuk mendatar.
 2. Untuk series, buka detail, pilih season, lalu episode.
-3. Klik ikon pencarian di kanan atas atau tekan `/` untuk mencari judul. Simpan pilihan dengan `+` ke Daftarku. Ikon folder membuka file lokal dan ikon profil merah membuka Pengaturan.
+3. Klik kolom pencarian di navigasi atas atau tekan `/` untuk mencari judul. Simpan pilihan dengan `+` ke Daftarku. Ikon folder membuka file lokal dan ikon profil merah membuka Pengaturan.
 4. `Esc` menutup player. `F11` atau tombol layar penuh mengganti mode layar.
 
 Daftarku dan episode terakhir tetap tersimpan di laptop. Riwayat mencatat episode yang dibuka, belum menyimpan posisi menit video internal.
@@ -49,4 +51,4 @@ Pemutaran eksternal memakai sesi stream yang sama; server yang mengikat stream k
 
 Tidak ada backend Android yang perlu dijalankan. Player sumber hanya dibuat ketika mulai menonton dan dilepas ketika ditutup. Poster dimuat saat dibutuhkan, bagian katalog di luar layar ditunda rendering-nya, dan tidak ada preview video otomatis.
 
-Pengaturan tersimpan di `.runtime/profile/playback.json`. Daftarku memakai profil desktop lama sehingga tetap tersedia. Cadangan kecil kunci penandatanganan Android disimpan di `.backup/retired-android-signing/`; alat build dan APK tidak dipertahankan.
+Pada ZIP portabel, pengaturan tersimpan di `resources/app/.runtime/profile/playback.json`. Pada source repository, lokasinya `.runtime/profile/playback.json`. Simpan folder profil tersebut bila ingin mempertahankan pengaturan dan Daftarku saat mengganti paket.
