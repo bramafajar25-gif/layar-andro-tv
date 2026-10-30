@@ -1,0 +1,30 @@
+﻿name: Publish separate platform releases
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-platforms.yml
+      - scripts/publish-platform-releases.cjs
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-platform-releases
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Upload Windows, HP and TV to their own release pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Copy verified v3.0.5 files into separate releases
+        run: node scripts/publish-platform-releases.cjs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

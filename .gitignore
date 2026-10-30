@@ -23,3 +23,5 @@ dist/marketing/
 
 android/app/src/main/assets/stream-tools.js
 /freellmapi/
+
+dist/platform-releases/
