@@ -2,7 +2,7 @@
 
 Panduan ini khusus paket **Windows Laptop**. Ekstrak seluruh `Layar-Windows-Laptop-*.zip` ke folder milikmu, lalu buka `Layar.exe`. Electron sudah disertakan; tidak perlu Node.js/npm. Biarkan folder `resources`, `locales`, dan DLL bersama aplikasi. Untuk menjalankan dari source repository, gunakan `Layar.vbs` setelah `npm.cmd ci`.
 
-Untuk HP atau Android TV, unduh `Layar-Android-TV-Mobile-*.apk` secara terpisah dari [Releases](https://github.com/bramafajar25-gif/layar-andro-tv/releases/latest).
+Untuk Android TV, unduh `Layar-Android-TV-*.apk`; untuk HP/tablet Android, unduh `Layar-Android-HP-*.apk` secara terpisah dari [Releases](https://github.com/bramafajar25-gif/layar-andro-tv/releases/latest).
 
 ## Mulai menonton
 

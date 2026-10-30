@@ -11,10 +11,23 @@ android {
         applicationId 'com.layar.tv'
         minSdk 21
         targetSdk 34
-        versionCode 5
-        versionName '3.0.4'
+        versionCode 6
+        versionName '3.0.5'
 
         vectorDrawables.useSupportLibrary = true
+    }
+
+    flavorDimensions 'device'
+    productFlavors {
+        tv {
+            dimension 'device'
+            resValue 'bool', 'is_tv_build', 'true'
+        }
+        mobile {
+            dimension 'device'
+            applicationId 'com.layar.mobile'
+            resValue 'bool', 'is_tv_build', 'false'
+        }
     }
 
     buildTypes {

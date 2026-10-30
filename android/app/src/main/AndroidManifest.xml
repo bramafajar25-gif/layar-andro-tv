@@ -5,9 +5,6 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <uses-feature
-        android:name="android.software.leanback"
-        android:required="false" />
-    <uses-feature
         android:name="android.hardware.touchscreen"
         android:required="false" />
     <uses-feature
@@ -29,13 +26,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize"
-            android:screenOrientation="unspecified">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:screenOrientation="unspecified" />
 
         <activity
             android:name=".PlayerActivity"

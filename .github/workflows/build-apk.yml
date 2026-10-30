@@ -25,7 +25,23 @@ jobs:
       - run: npm test
 
   android:
-    name: Android TV and Mobile APK
+    name: ${{ matrix.name }} APK
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavor: tv
+            task: Tv
+            name: Android TV
+            artifact: Layar-Android-TV
+            package: com.layar.tv.debug
+            label: Layar TV
+          - flavor: mobile
+            task: Mobile
+            name: Android HP
+            artifact: Layar-Android-HP
+            package: com.layar.mobile.debug
+            label: Layar HP
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -45,15 +61,22 @@ jobs:
         working-directory: android
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          gradle assembleDebug lintDebug --stacktrace
+          gradle assemble${{ matrix.task }}Debug lint${{ matrix.task }}Debug --stacktrace
+      - name: Verify APK device label and package
+        run: |
+          APK="android/app/build/outputs/apk/${{ matrix.flavor }}/debug/app-${{ matrix.flavor }}-debug.apk"
+          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
+          "$AAPT" dump badging "$APK" > apk-badging.txt
+          grep -F "package: name='${{ matrix.package }}'" apk-badging.txt
+          grep -F "application-label:'${{ matrix.label }}'" apk-badging.txt
       - name: Name Android download
         run: |
           VERSION=$(node -p "require('./package.json').version")
           mkdir -p dist/downloads
-          cp android/app/build/outputs/apk/debug/app-debug.apk "dist/downloads/Layar-Android-TV-Mobile-v${VERSION}.apk"
+          cp "android/app/build/outputs/apk/${{ matrix.flavor }}/debug/app-${{ matrix.flavor }}-debug.apk" "dist/downloads/${{ matrix.artifact }}-v${VERSION}.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: Layar-Android-TV-Mobile
+          name: ${{ matrix.artifact }}
           path: dist/downloads/*.apk
           if-no-files-found: error
           retention-days: 30
@@ -86,7 +109,7 @@ jobs:
           retention-days: 30
 
   release:
-    name: Publish separate Windows and Android downloads
+    name: Publish Windows, Android TV and Android HP downloads
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: [android, windows]
     runs-on: ubuntu-latest
@@ -106,24 +129,25 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.value }}
           target_commitish: ${{ github.sha }}
-          name: Layar v${{ steps.version.outputs.value }} - Windows Laptop & Android
+          name: Layar v${{ steps.version.outputs.value }} - Windows | Android TV | Android HP
           make_latest: true
           fail_on_unmatched_files: true
           body: |
-            Download sesuai perangkat:
+            ## Pilih download sesuai perangkat
 
-            - **Laptop Windows x64:** `Layar-Windows-Laptop-*.zip`. Ekstrak seluruh ZIP, lalu buka **Layar.exe**. Electron sudah termasuk; tidak perlu Node.js/npm.
-            - **HP Android / Android TV:** `Layar-Android-TV-Mobile-*.apk`. Pasang APK di perangkat Android. Build ini ditandatangani dengan debug key CI.
+            | Perangkat | File | Cara pakai |
+            | --- | --- | --- |
+            | **WINDOWS LAPTOP / PC x64** | `Layar-Windows-Laptop-*.zip` | Ekstrak seluruh ZIP, lalu buka **Layar.exe**. Tidak perlu Node.js/npm. |
+            | **ANDROID TV / TV BOX** | `Layar-Android-TV-*.apk` | Pasang di Android TV. Nama aplikasi **Layar TV**, navigasi remote dan landscape. |
+            | **ANDROID HP / TABLET** | `Layar-Android-HP-*.apk` | Pasang di HP/tablet. Nama aplikasi **Layar HP**, navigasi sentuh dan katalog portrait/landscape. |
 
-            Baru di v3.0.4:
-            - Scrollbar disembunyikan tanpa mematikan scroll.
-            - Detail series dengan backdrop, tab, timeline season, kartu episode dan status pernah diputar.
-            - Katalog Android mendukung portrait; player tetap landscape.
-            - Fokus TV memakai efek ringan tanpa blur berat.
-            - Popup resolusi dan audio hasil deteksi HLS. Pilihan kualitas mengikuti API yang tersedia di player sumber.
-            - Passthrough di popup laptop untuk sesi mpv berikutnya; WebView Android belum mendukung passthrough.
+            APK TV dan HP dibuat sebagai varian terpisah. Player video Android tetap landscape.
+            Pilih tiga file di atas; arsip **Source code** ditujukan untuk pengembangan.
 
-            Untuk APK lama yang menolak update karena tanda tangan berbeda, hapus instalasi lama sebelum memasang APK ini; data lokal ikut terhapus.
+            Memuat UI episode dengan timeline season, scrollbar tersembunyi, serta menu resolusi dan deteksi audio HLS. Pilihan resolusi mengikuti kontrol yang tersedia di sumber. Passthrough tersedia melalui mpv pada Windows.
+
+            APK memakai debug key CI. Jika update aplikasi lama ditolak karena tanda tangan berbeda, hapus instalasi lama dahulu (data lokal ikut terhapus).
           files: |
             dist/downloads/Layar-Windows-Laptop-*.zip
-            dist/downloads/Layar-Android-TV-Mobile-*.apk
+            dist/downloads/Layar-Android-TV-*.apk
+            dist/downloads/Layar-Android-HP-*.apk

@@ -8,10 +8,11 @@ Buka [halaman Releases](https://github.com/bramafajar25-gif/layar-andro-tv/relea
 
 | Perangkat | File download | Cara menjalankan |
 | --- | --- | --- |
-| Laptop Windows x64 | `Layar-Windows-Laptop-v3.0.4-x64.zip` | Ekstrak seluruh ZIP, buka `Layar.exe`. Tidak perlu Node.js/npm. |
-| HP Android / Android TV | `Layar-Android-TV-Mobile-v3.0.4.apk` | Pasang APK di Android. APK yang sama mendukung HP dan TV. |
+| Laptop Windows x64 | `Layar-Windows-Laptop-v3.0.5-x64.zip` | Ekstrak seluruh ZIP, buka `Layar.exe`. Tidak perlu Node.js/npm. |
+| **Android TV / TV Box** | `Layar-Android-TV-v3.0.5.apk` | Pasang di TV. Nama aplikasi **Layar TV**, mode remote dan landscape. |
+| **Android HP / Tablet** | `Layar-Android-HP-v3.0.5.apk` | Pasang di HP/tablet. Nama aplikasi **Layar HP**, mode sentuh dan katalog portrait/landscape. |
 
-Paket Windows dan Android terpisah. Jangan pilih arsip **Source code** untuk pemasangan biasa. Jika release terbaru masih dibuild, cek [progres build](https://github.com/bramafajar25-gif/layar-andro-tv/actions/workflows/build-apk.yml). Release baru diterbitkan setelah kedua paket berhasil dibuat.
+Tersedia **tiga download terpisah: Windows, Android TV, dan Android HP**. Varian TV dan HP memiliki identitas aplikasi berbeda. Jangan pilih arsip **Source code** untuk pemasangan biasa. Jika release terbaru masih dibuild, cek [progres build](https://github.com/bramafajar25-gif/layar-andro-tv/actions/workflows/build-apk.yml). Release baru diterbitkan setelah ketiga paket berhasil dibuat.
 
 APK memakai debug key CI. Jika update APK lama ditolak karena tanda tangan berbeda, instalasi lama perlu dihapus terlebih dahulu (data lokal ikut terhapus).
 
@@ -37,7 +38,7 @@ Panduan laptop: [dist/desktop/Panduan.md](dist/desktop/Panduan.md). Untuk membua
 
 Pilihan **ID / EN** di navigasi atas atau **Pengaturan → Bahasa tampilan** mengganti bahasa menu tanpa restart dan tersimpan lokal. Bahasa tampilan terpisah dari judul, sinopsis, serta subtitle sumber. Sub Indo tidak dijamin untuk seluruh katalog; pilih Indonesia di menu CC/Subtitle player bila tersedia. Indikator subtitle hanya menyatakan track yang terdeteksi, bukan jaminan untuk judul lain.
 
-Source Android ada di `android/`; source desktop ada di `desktop/`. Workflow [Build Windows and Android Downloads](.github/workflows/build-apk.yml) menjalankan tes, menyalin aset web ke Android, lalu membuat APK dan ZIP Windows dalam job terpisah. Artifact bernama `Layar-Android-TV-Mobile` dan `Layar-Windows-Laptop`. Pada branch `main`, keduanya dipublikasikan bersama di Releases. Android memakai Activity player sendiri; mpv dan pengaturan ukuran player hanya berlaku di desktop.
+Source Android ada di `android/`; source desktop ada di `desktop/`. Workflow [Build Windows and Android Downloads](.github/workflows/build-apk.yml) menjalankan tes, menyalin aset web ke Android, lalu membuat APK dan ZIP Windows dalam job terpisah. Artifact bernama `Layar-Android-TV`, `Layar-Android-HP`, dan `Layar-Windows-Laptop`. Android menggunakan flavor `tv` dan `mobile`, dengan label launcher dan konfigurasi perangkat masing-masing. Pada branch `main`, ketiganya dipublikasikan bersama di Releases. Android memakai Activity player sendiri; mpv dan pengaturan ukuran player hanya berlaku di desktop.
 
 Pemutaran internal menggunakan Electron WebContentsView terisolasi. Pop-up ditolak; filter iklan dapat dimatikan jika sumber bermasalah. Verifikasi dan waktu tunggu dari server tetap berlaku. Tidak ada file film yang disimpan atau diunduh.
 

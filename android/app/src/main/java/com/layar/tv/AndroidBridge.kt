@@ -82,8 +82,7 @@ class AndroidBridge(
 
     @JavascriptInterface
     fun isTelevision(): Boolean {
-        val manager = activity.getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
-        return manager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+        return activity.resources.getBoolean(R.bool.is_tv_build)
     }
 
     @JavascriptInterface
