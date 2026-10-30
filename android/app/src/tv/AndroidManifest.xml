@@ -2,8 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-feature android:name="android.software.leanback" android:required="true" />
-    <application>
-        <activity android:name=".MainActivity" android:screenOrientation="sensorLandscape"
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <application android:banner="@drawable/banner">
+        <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="sensorLandscape"
             tools:replace="android:screenOrientation">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

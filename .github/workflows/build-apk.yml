@@ -61,7 +61,10 @@ jobs:
         working-directory: android
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          gradle assemble${{ matrix.task }}Debug lint${{ matrix.task }}Debug --stacktrace
+          if ! gradle assemble${{ matrix.task }}Debug lint${{ matrix.task }}Debug --stacktrace; then
+            find app/build -name 'lint-results-*.txt' -exec cat {} \;
+            exit 1
+          fi
       - name: Verify APK device label and package
         run: |
           APK="android/app/build/outputs/apk/${{ matrix.flavor }}/debug/app-${{ matrix.flavor }}-debug.apk"
