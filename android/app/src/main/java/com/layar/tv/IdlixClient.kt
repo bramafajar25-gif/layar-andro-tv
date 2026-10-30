@@ -142,6 +142,7 @@ class IdlixClient {
             res.put("runtime", item.optInt("runtime"))
         }
         res.put("quality", item.optString("quality", ""))
+        res.put("certification", item.optString("certification", ""))
         res.put("numberOfSeasons", item.optInt("numberOfSeasons", 0))
 
         val genresArr = JSONArray()

@@ -15,25 +15,7 @@ function isStreamURL(value) {
       !/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[)/i.test(url.hostname);
   } catch { return false; }
 }
-function attributes(line) {
-  const fields = {};
-  for (const match of line.matchAll(/([\w-]+)=("[^"]*"|[^,\r\n]*)/g)) fields[match[1]] = match[2].replace(/^"|"$/g, '');
-  return fields;
-}
-function parseManifest(text) {
-  const resolutions = new Set(), codecs = new Set(), channels = new Set();
-  let atmos = false;
-  if (!text.trimStart().startsWith('#EXTM3U')) return { resolutions: [], codecs: [], channels: [], atmos: false };
-  for (const line of text.split(/\r?\n/)) {
-    if (!/^#EXT-X-(STREAM-INF|MEDIA|I-FRAME-STREAM-INF):/.test(line)) continue;
-    const data = attributes(line);
-    if (/^\d+x\d+$/.test(data.RESOLUTION || '')) resolutions.add(Number(data.RESOLUTION.split('x')[1]));
-    for (const codec of (data.CODECS || '').split(',')) if (codec.trim()) codecs.add(codec.trim());
-    if (data.CHANNELS) channels.add(data.CHANNELS);
-    if (/(^|\/)JOC($|\/)/i.test(data.CHANNELS || '')) atmos = true;
-  }
-  return { resolutions: [...resolutions].sort((a,b) => b-a), codecs: [...codecs], channels: [...channels], atmos };
-}
+const { parseManifest } = require('../stream-tools.js');
 function nativeBaseArgs({ title, quality = 'auto', passthrough = false }) {
   const bitrate = quality === 'eco' ? '2000000' : quality === 'maximum' ? 'max' : '8000000';
   const args = ['--no-config', '--hwdec=auto-safe', '--cache=yes', '--demuxer-max-bytes=64MiB', '--force-window=immediate', '--save-position-on-quit=no', '--title=' + String(title).slice(0,250), '--hls-bitrate=' + bitrate];

@@ -179,9 +179,10 @@ function renderHero(items) {
   const dots = hero.querySelectorAll('[data-slide]');
 
   function updateContent(item) {
-    const maturity = item.rating ? (item.rating >= 7.5 ? '18+' : (item.rating >= 6 ? '13+' : 'SU')) : '13+';
+    const maturity = item.certification || '';
     const tagline = item.genres?.length ? item.genres.slice(0, 2).join(' • ') : (item.type === 'tv_series' ? t("Series Populer") : t("Film Populer"));
     maturitySpan.textContent = maturity;
+    maturitySpan.parentElement.hidden = !maturity;
 
     contentEl.innerHTML = `
       <div class="hero-kicker"><span class="hero-monogram">L</span> <span class="hero-type-tag">${typeLabel(item)}</span></div>
@@ -398,8 +399,8 @@ function setTab(tab) {
   render();
 }
 
-function openModal() { focusBeforeModal = document.activeElement; $('#modal').classList.remove('hidden'); document.body.classList.add('locked'); $('#modal').scrollTop = 0; $('#modal').focus(); }
-function closeModal() { ++detailToken; ++episodeToken; ++settingsToken; $('#modal').classList.add('hidden'); $('#dialog').replaceChildren(); detail = null; if (!playback) document.body.classList.remove('locked'); focusBeforeModal?.focus?.(); if (currentTab === 'list') render(); }
+function openModal() { if (playback) desktop?.playerVisible?.(false)?.catch(() => {}); $('#dialog').classList.remove('concept-dialog'); focusBeforeModal = document.activeElement; $('#modal').classList.remove('hidden'); document.body.classList.add('locked'); $('#modal').scrollTop = 0; $('#modal').focus(); }
+function closeModal() { ++detailToken; ++episodeToken; ++settingsToken; $('#modal').classList.add('hidden'); $('#dialog').replaceChildren(); $('#dialog').classList.remove('concept-dialog'); detail = null; if (playback) desktop?.playerVisible?.(true)?.catch(() => {}); if (!playback) document.body.classList.remove('locked'); focusBeforeModal?.focus?.(); if (currentTab === 'list') render(); }
 async function openDetail(item, focusEpisodes = false) {
   openModal(); const token = ++detailToken;
   $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t("Tutup"))}">${icon('close')}</button><div class="loading"><span class="spinner"></span><p>${t("Memuat {title}…", { title: esc(item.title) })}</p></div>`;
@@ -407,48 +408,107 @@ async function openDetail(item, focusEpisodes = false) {
     const data = await api(`${item.type === 'tv_series' ? 'series' : 'movies'}/${item.slug}`);
     if (token !== detailToken) return;
     detail = data; renderDetail(data);
-    if (focusEpisodes && item.type === 'tv_series') $('.episode-section')?.scrollIntoView({ block: 'start' });
+    if (focusEpisodes && item.type === 'tv_series') { selectDetailTab('episodes'); $('#dialog [data-season][aria-pressed=true]')?.focus(); }
   } catch (error) {
     if (token !== detailToken) return;
     $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t("Tutup"))}">${icon('close')}</button><div class="empty"><h2>${t("Detail belum bisa dimuat")}</h2><p>${esc(errorText(error))}</p><button class="btn" data-retry>${t("Coba lagi")}</button></div>`;
     $('#dialog [data-retry]').onclick = () => openDetail(item, focusEpisodes);
   }
 }
+let detailEpisodes = [];
+function selectDetailTab(name) {
+  document.querySelectorAll('[data-detail-tab]').forEach(button => {
+    const active = button.dataset.detailTab === name;
+    button.setAttribute('aria-selected', String(active));
+    button.tabIndex = active ? 0 : -1;
+  });
+  document.querySelectorAll('[data-detail-panel]').forEach(panel => { panel.hidden = panel.dataset.detailPanel !== name; });
+}
 function renderDetail(item) {
   const last = historyOf(item), series = item.type === 'tv_series';
-  const availableSeasons = item.seasons.filter(s => s.number > 0).sort((a, b) => a.number - b.number);
+  const availableSeasons = (item.seasons || []).filter(s => s.number > 0).sort((a, b) => a.number - b.number);
   const initialSeason = availableSeasons.find(s => s.number === last?.season)?.number || availableSeasons[0]?.number;
-  const matchScore = item.rating ? Math.min(99, Math.round(item.rating * 10 + 12)) + '% Cocok' : '96% Cocok';
-  const maturity = item.rating ? (item.rating >= 7.5 ? '18+' : (item.rating >= 6 ? '13+' : 'SU')) : '13+';
-  const durationText = series ? (item.numberOfSeasons ? `${item.numberOfSeasons} Season` : 'Series') : runtime(item.runtime);
-
-  $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t("Tutup"))}">${icon('close')}</button><div class="detail-art" style="background-image:url('${image(item.backdrop, 'w1280')}')"><div class="detail-art-gradient"></div><div class="detail-title"><div class="detail-kicker"><span class="hero-monogram">L</span> <span class="eyebrow">${typeLabel(item)} · IDLIX</span></div><h2>${esc(item.title)}</h2><div class="detail-quick-meta"><span class="detail-match">${matchScore}</span><span class="detail-year">${esc(item.year)}</span><span class="detail-maturity-badge">${maturity}</span><span class="detail-duration">${durationText}</span><span class="detail-badge">HD</span><span class="detail-badge">5.1</span><span class="detail-badge">Sub Indo</span></div><div class="btns"><button class="btn primary detail-play-btn" data-play ${item.hasVideo === false && !series ? 'disabled' : ''}>${icon('play')} <span>${series ? last?.episode ? t("Pilih episode · Terakhir S{season} E{episode}", { season: last.season, episode: last.episode }) : t("Pilih episode") : t("Putar film")}</span></button><button class="icon-button" data-save="${esc(keyOf(item))}" aria-label="${esc(t("Simpan ke Daftarku"))}" aria-pressed="${saved(item)}">${listButton(item, true)}</button></div></div></div><div class="detail-copy"><div class="detail-main-col"><p class="detail-synopsis">${esc(item.overview || t("Sinopsis belum tersedia."))}</p><div class="detail-features"><div class="feature-item">${icon('sparkle')} <span>${series ? t("Tersedia dalam audio multi-kanal dan teks Bahasa Indonesia.") : t("Kualitas gambar jernih WEB-DL dengan audio surround.")}</span></div></div></div><div class="detail-meta-col">${item.cast.length ? `<p><b>${t("Pemeran:")}</b> <span class="meta-val">${esc(item.cast.join(', '))}</span></p>` : ''}${item.genres.length ? `<p><b>${t("Genre:")}</b> <span class="meta-val">${item.genres.map(g => `<span class="genre-pill">${esc(g)}</span>`).join('')}</span></p>` : ''}${item.director ? `<p><b>${t("Sutradara:")}</b> <span class="meta-val">${esc(item.director)}</span></p>` : ''}<p><b>${t("Katalog:")}</b> <span class="meta-val">IDLIX Official Stream</span></p></div></div>${series ? `<section class="episode-section"><div class="episode-heading"><h3>${t("Episode")}</h3><span class="episode-count"></span><select id="detailSeason" aria-label="${esc(t("Pilih season"))}" ${!availableSeasons.length ? 'disabled' : ''}>${availableSeasons.length ? availableSeasons.map(s => `<option value="${s.number}" ${s.number === initialSeason ? 'selected' : ''}>Season ${s.number}${s.count ? ' · ' + t('{count} episode', { count: s.count }) : ''}</option>`).join('') : `<option>${t("Belum tersedia")}</option>`}</select></div><div id="detailEpisodes"></div><p class="source-note">${t("Pilih episode dan mulai menonton. Pop-up diblokir; iklan dilewati otomatis saat tersedia.")}</p></section>` : `<section class="movie-source"><h3>${t("Siap untuk nonton?")}</h3><p>${item.hasVideo ? t("Putar langsung di Layar. Kualitas dan audio mengikuti video asli; waktu tunggu server masih dapat berlaku.") : t("Video belum tersedia dari sumber IDLIX.")}</p></section>`}`;
+  detailEpisodes = [];
+  $('#dialog').classList.add('concept-dialog');
+  const tabs = [['overview', t('Overview')], ...(series ? [['episodes', t('Episodes')]] : []), ['details', t('Details')]];
+  const title = image(item.logo) ? `<img class="concept-logo" src="${image(item.logo, 'w500')}" alt="${esc(item.title)}">` : `<h2>${esc(item.title)}</h2>`;
+  $('#dialog').innerHTML = `<article class="concept-detail">
+    <div class="concept-backdrop" style="background-image:url('${image(item.backdrop, 'w1280')}')"></div>
+    <button class="icon-button dialog-close" data-close aria-label="${esc(t('Tutup'))}">${icon('close')}</button>
+    <div class="concept-layout">
+      <div class="concept-left">
+        <div class="detail-kicker"><span class="hero-monogram">L</span><span class="eyebrow">${typeLabel(item)}</span></div>
+        <div class="concept-title">${title}</div>
+        <div class="detail-quick-meta">${metadata(item)}${item.certification ? `<span class="detail-maturity-badge">${esc(item.certification)}</span>` : ''}</div>
+        <div class="concept-panels">
+          <section id="detail-overview" role="tabpanel" aria-labelledby="tab-overview" data-detail-panel="overview"><p class="detail-synopsis">${esc(item.overview || t('Sinopsis belum tersedia.'))}</p></section>
+          ${series ? `<section id="detail-episodes" role="tabpanel" aria-labelledby="tab-episodes" data-detail-panel="episodes" hidden><p class="detail-synopsis">${t('Pilih season, lalu episode yang ingin kamu tonton.')}</p>${last?.episode ? `<p class="episode-status">${esc(t('Terakhir diputar'))}: S${last.season} · E${last.episode}</p>` : ''}<button class="text-button" data-browse-episodes>${t('Daftar episode')} ?</button></section>` : ''}
+          <section id="detail-details" role="tabpanel" aria-labelledby="tab-details" data-detail-panel="details" hidden><div class="detail-meta-col">${item.cast?.length ? `<p><b>${t('Pemeran:')}</b> <span class="meta-val">${esc(item.cast.join(', '))}</span></p>` : ''}${item.genres?.length ? `<p><b>${t('Genre:')}</b> <span class="meta-val">${esc(item.genres.join(' · '))}</span></p>` : ''}${item.director ? `<p><b>${t('Sutradara:')}</b> <span class="meta-val">${esc(item.director)}</span></p>` : ''}<p>${t('Kualitas dan audio mengikuti stream yang diputar.')}</p></div></section>
+        </div>
+        <div class="btns concept-actions"><button class="btn primary" data-play ${!series && item.hasVideo === false || series && !initialSeason ? 'disabled' : ''}>${icon('play')} ${t('Putar')}</button><button class="btn" data-more-info>${t('Info lainnya')}</button><button class="icon-button" data-save="${esc(keyOf(item))}" aria-label="${esc(t('Simpan ke Daftarku'))}" aria-pressed="${saved(item)}">${listButton(item, true)}</button></div>
+        <div class="detail-tabs" role="tablist" aria-label="${esc(t('Detail judul'))}">${tabs.map(([name, label]) => `<button id="tab-${name}" role="tab" data-detail-tab="${name}" aria-controls="detail-${name}" aria-selected="${name === 'overview'}" tabindex="${name === 'overview' ? 0 : -1}">${label}</button>`).join('')}</div>
+      </div>
+      <div class="concept-center"><button class="concept-play" data-hero-play aria-label="${esc(t('Putar'))}" ${!series && item.hasVideo === false || series && !initialSeason ? 'disabled' : ''}>${icon('play')}</button></div>
+      ${series ? `<section class="episode-section concept-episodes" aria-label="${esc(t('Daftar episode'))}">
+        <div class="season-timeline" aria-label="${esc(t('Pilih season'))}">${availableSeasons.map(season => `<button data-season="${season.number}" aria-pressed="${season.number === initialSeason}">Season ${String(season.number).padStart(2, '0')}</button>`).join('')}</div>
+        <div class="concept-episode-list"><div class="episode-heading"><h3>${t('Episode')}</h3><span class="episode-count" aria-live="polite"></span></div><select id="detailSeason" class="hidden" aria-label="${esc(t('Pilih season'))}">${availableSeasons.map(season => `<option value="${season.number}" ${season.number === initialSeason ? 'selected' : ''}>Season ${season.number}</option>`).join('')}</select><div id="detailEpisodes" aria-live="polite"></div></div>
+      </section>` : ''}
+    </div>
+  </article>`;
+  $('#dialog .concept-logo')?.addEventListener('error', event => event.target.replaceWith(element('h2', '', esc(item.title))), { once: true });
   $('#dialog [data-save]').onclick = () => toggleList(item);
-  $('#dialog [data-play]').onclick = () => {
-    if (series) { $('.episode-section').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('#detailSeason').focus({ preventScroll: true }); }
-    else startPlayback(item);
+  const play = async () => {
+    if (!series) return startPlayback(item);
+    const season = Number($('#detailSeason').value);
+    if (!detailEpisodes.length) await loadDetailEpisodes(item, season);
+    if (detail !== item || Number($('#detailSeason')?.value) !== season) return;
+    const episode = detailEpisodes.find(ep => ep.available && last?.season === season && last?.episode === ep.number) || detailEpisodes.find(ep => ep.available);
+    if (episode) startPlayback(item, season, episode);
+    else { selectDetailTab('episodes'); $('#detailEpisodes').scrollIntoView({ block: 'nearest' }); }
   };
+  $('#dialog [data-play]').onclick = play;
+  $('#dialog [data-hero-play]').onclick = play;
+  $('#dialog [data-more-info]').onclick = () => { selectDetailTab('details'); $('#tab-details').focus(); };
+  const buttons = [...document.querySelectorAll('[data-detail-tab]')];
+  buttons.forEach((button, index) => {
+    button.onclick = () => selectDetailTab(button.dataset.detailTab);
+    button.onkeydown = event => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault(); event.stopPropagation();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+      selectDetailTab(buttons[next].dataset.detailTab); buttons[next].focus();
+    };
+  });
   if (series) {
+    $('#dialog [data-browse-episodes]').onclick = () => $('#dialog [data-season][aria-pressed=true]')?.focus();
+    document.querySelectorAll('[data-season]').forEach(button => { button.onclick = () => {
+      $('#detailSeason').value = button.dataset.season;
+      loadDetailEpisodes(item, Number(button.dataset.season));
+    }; });
     $('#detailSeason').onchange = event => loadDetailEpisodes(item, Number(event.target.value));
     if (initialSeason) loadDetailEpisodes(item, initialSeason);
-    else $('#detailEpisodes').innerHTML = `<div class="empty">${t("Belum ada season yang tersedia dari sumber.")}</div>`;
+    else $('#detailEpisodes').innerHTML = `<div class="empty">${t('Belum ada season yang tersedia dari sumber.')}</div>`;
   }
 }
 function episodeRow(item, season, episode, active) {
   const button = element('button', 'episode' + (active ? ' selected' : ''));
+  const played = storage.get('playedEpisodes', {})[`${keyOf(item)}:${season}:${episode.number}`];
   button.disabled = !episode.available;
   button.setAttribute('aria-label', t("Putar {title}, Season {season}, Episode {episode}: {name}", { title: item.title, season, episode: episode.number, name: episode.title }) + (!episode.available ? t(", belum tersedia") : ""));
-  button.innerHTML = `<span class="ep-number">${episode.number}</span><div class="ep-art">${image(episode.still) ? `<img src="${image(episode.still, 'w300')}" alt="" loading="lazy">` : `<div class="ep-no-still">${icon('film')}</div>`}<div class="ep-play-overlay">${icon('play')}</div></div><div class="ep-info"><div class="ep-title"><span class="ep-name">${esc(episode.title)}</span><span class="ep-runtime">${runtime(episode.runtime)}</span></div><p class="ep-overview">${esc(episode.overview || t("Sinopsis episode belum tersedia."))}</p>${!episode.available ? `<span class="ep-unavailable">${t("Video belum tersedia")}</span>` : ''}</div>`;
+  button.innerHTML = `<span class="ep-number">${episode.number}</span><div class="ep-art">${image(episode.still) ? `<img src="${image(episode.still, 'w300')}" alt="" loading="lazy">` : `<div class="ep-no-still">${icon('film')}</div>`}<div class="ep-play-overlay">${icon('play')}</div>${episode.runtime ? `<span class="ep-duration-badge">${runtime(episode.runtime)}</span>` : ''}</div><div class="ep-info"><div class="ep-title"><span class="ep-name">${esc(episode.title)}</span><span class="ep-runtime">${runtime(episode.runtime)}</span></div><p class="ep-overview">${esc(episode.overview || t("Sinopsis episode belum tersedia."))}</p>${active || played ? `<span class="episode-status">${icon('check')}${t(active ? 'Terakhir diputar' : 'Pernah diputar')}</span>` : ''}${!episode.available ? `<span class="ep-unavailable">${t("Video belum tersedia")}</span>` : ''}</div>`;
   button.onclick = () => startPlayback(item, season, episode);
   return button;
 }
 async function loadDetailEpisodes(item, season) {
   const token = ++episodeToken, node = $('#detailEpisodes'), last = historyOf(item);
+  detailEpisodes = [];
+  document.querySelectorAll('[data-season]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.season) === season)));
   node.innerHTML = `<div class="loading"><span class="spinner"></span><p>${t("Memuat episode…")}</p></div>`;
   try {
     const data = await api(`series/${item.slug}/season/${season}`);
     if (token !== episodeToken || !node.isConnected) return;
     node.replaceChildren();
+    detailEpisodes = data.episodes;
     $('.episode-count').textContent = t('{count} episode', { count: data.episodes.length });
     data.episodes.forEach(episode => node.append(episodeRow(item, season, episode, season === last?.season && episode.number === last?.episode)));
     if (!data.episodes.length) node.innerHTML = `<div class="empty">${t("Season ini belum punya episode yang tersedia.")}</div>`;
@@ -485,6 +545,7 @@ async function startPlayback(item, season, episode) {
   $('#playerMessage').innerHTML = `<span class="spinner"></span><p>${t("Menyiapkan player IDLIX…")}</p>`;
   $('#playerNote').textContent = t("Menyiapkan sesi. Pop-up diblokir; iklan dilewati saat tersedia.");
   $('#streamInfo').textContent = t("MENYIAPKAN VIDEO");
+  $('#audioInfo').textContent = t('Audio belum terdeteksi');
   $('#subtitleInfo').textContent = t('Subtitle: cek menu CC');
   $('#subtitleInfo').title = t('Belum dapat memastikan sub Indo. Pilih Indonesia / Indonesian di menu CC atau Subtitle jika tersedia.');
   $('#nativePlayer').disabled = true;
@@ -502,6 +563,11 @@ async function startPlayback(item, season, episode) {
     if (playback !== current) return;
     const history = storage.get('history', []).filter(x => keyOf(x.item) !== keyOf(item));
     storage.set('history', [{ item, season: season || null, episode: episode?.number || null, at: Date.now() }, ...history].slice(0, 20));
+    if (episode) {
+      const played = storage.get('playedEpisodes', {});
+      played[`${keyOf(item)}:${season}:${episode.number}`] = Date.now();
+      storage.set('playedEpisodes', Object.fromEntries(Object.entries(played).sort((a,b) => b[1] - a[1]).slice(0, 500)));
+    }
   } catch (error) { if (playback === current) { $('#playerMessage').innerHTML = `<p>${esc(errorText(error))}</p>`; $('#playerNote').textContent = t("Gunakan Muat ulang atau Buka sumber."); } }
 }
 async function loadPlayerEpisodes(season) {
@@ -530,6 +596,47 @@ async function closePlayer() {
   document.body.classList.remove('locked');
   try { await desktop?.closePlayer(); } catch {}
   if (currentTab === 'home') render();
+}
+async function openPlayerQuality() {
+  if (!playback) return;
+  openModal();
+  const current = playback, token = ++settingsToken;
+  $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t('Tutup'))}">${icon('close')}</button><div class="loading"><span class="spinner"></span></div>`;
+  try {
+    const [quality, preferences] = await Promise.all([
+      desktop?.playerQuality?.() || { levels: [], canSelect: false },
+      desktop?.settings?.() || { quality: 'auto', blockAds: true, passthrough: false }
+    ]);
+    if (token !== settingsToken || playback !== current) return;
+    const levels = quality.levels || [];
+    const activeHeight = lastPlayerStatus?.height || quality.height;
+    const audio = streamFormats.audioFormats?.join(' / ') || t('Audio belum terdeteksi');
+    $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t('Tutup'))}">${icon('close')}</button><div class="settings-body player-quality-menu"><span class="eyebrow">LAYAR / PLAYER</span><h2>${t('Kualitas video dan audio')}</h2>
+      <p id="qualityActive" role="status">${activeHeight ? t('Resolusi aktif') + ': ' + qualityLabel(activeHeight) : t('Menunggu video')}</p>
+      <label class="settings-row"><span><b>${t('Resolusi')}</b><small>${t('Auto menyesuaikan kualitas dengan koneksi.')}</small></span><select id="streamQuality" ${!quality.canSelect ? 'disabled' : ''}>${levels.length ? levels.map(level => `<option value="${esc(level.id)}" ${level.id === quality.selected ? 'selected' : ''}>${esc(level.label)}</option>`).join('') : `<option>${t('Menu kualitas sumber')}</option>`}</select></label>
+      ${!quality.canSelect ? `<p>${t('Player ini tidak mengekspos pilihan kualitas. Gunakan menu kualitas pada video.')}</p>` : ''}
+      <p>${t('Resolusi di manifest')}: ${streamFormats.resolutions?.map(qualityLabel).join(' · ') || t('Belum terdeteksi')}</p>
+      <div class="audio-format-badge" id="qualityAudio">${esc(audio)}</div><p>${t('Format audio di sumber; keluaran speaker mengikuti perangkat.')}</p>
+      <label class="settings-row"><span><b>Audio passthrough · mpv</b><small>${t('Berlaku saat berikutnya membuka mpv. Memerlukan perangkat HDMI dan track yang mendukung.')}</small></span><input id="playerPassthrough" type="checkbox" ${preferences.passthrough ? 'checked' : ''} ${window.AndroidBridge || !preferences.nativePath ? 'disabled' : ''}></label>
+      ${window.AndroidBridge || !preferences.nativePath ? `<p>${t('Passthrough tersedia melalui mpv di laptop. Hubungkan mpv lewat Pengaturan.')}</p>` : ''}
+      <p id="qualityFeedback" role="status"></p>
+    </div>`;
+    $('#streamQuality').onchange = async event => {
+      const control = event.target; control.disabled = true;
+      try { await desktop.playerQuality(control.value); }
+      catch (error) { if (token === settingsToken) $('#qualityFeedback').textContent = errorText(error); }
+      finally { if (token === settingsToken) control.disabled = !quality.canSelect; }
+    };
+    $('#playerPassthrough').onchange = async event => {
+      const control = event.target; control.disabled = true;
+      try { const latest = await desktop.settings(); await desktop.saveSettings({ ...latest, passthrough: control.checked }); }
+      catch (error) { control.checked = !control.checked; if (token === settingsToken) $('#qualityFeedback').textContent = errorText(error); }
+      finally { if (token === settingsToken) control.disabled = false; }
+    };
+    $('#dialog [data-close]').focus();
+  } catch (error) {
+    if (token === settingsToken) { closeModal(); toast(errorText(error)); }
+  }
 }
 async function openSettings() {
   if (!$('#languagePreference')) openModal(); ++detailToken; const token = ++settingsToken;
@@ -634,6 +741,7 @@ document.addEventListener('keydown', event => {
 });
 $('#modal').onclick = event => { if (event.target === $('#modal') || event.target.closest('[data-close]')) closeModal(); };
 $('#playerBack').onclick = closePlayer;
+$('#playerQuality').onclick = openPlayerQuality;
 $('#playerSeason').onchange = event => loadPlayerEpisodes(Number(event.target.value));
 $('#playerSidebar').onclick = () => { $('#player').classList.toggle('no-sidebar'); updateBounds(); };
 $('#fullscreen').onclick = () => desktop?.fullscreen();
@@ -661,6 +769,9 @@ function handlePlayerStatus(status) {
   else if (status.state === 'loaded') $('#playerNote').textContent = t("Menyiapkan video. Verifikasi atau waktu tunggu dapat diminta sumber.");
   else if (status.state === 'stream') {
     if (status.resolutions) streamFormats = status;
+    const audio = streamFormats.audioFormats?.join(' / ') || t('Audio belum terdeteksi');
+    $('#audioInfo').textContent = t('Audio sumber') + ': ' + audio;
+    if ($('#qualityAudio')) $('#qualityAudio').textContent = audio;
     $('#nativePlayer').disabled = !status.externalReady || externalPlaying;
     $('#nativePlayer').title = t("Putar stream yang sama dengan mpv yang dipilih di Pengaturan");
   } else if (status.state === 'metrics' && !externalPlaying) {
@@ -668,6 +779,7 @@ function handlePlayerStatus(status) {
     $('#subtitleInfo').textContent = t(detected ? 'Sub Indo terdeteksi' : 'Subtitle: cek menu CC');
     $('#subtitleInfo').title = t(detected ? 'Sub Indo terdeteksi' : status.subtitleTracks?.length ? 'Track subtitle lain terdeteksi; cek menu CC.' : 'Belum dapat memastikan sub Indo. Pilih Indonesia / Indonesian di menu CC atau Subtitle jika tersedia.');
     const actual = qualityLabel(status.height);
+    if ($('#qualityActive')) $('#qualityActive').textContent = actual ? t('Resolusi aktif') + ': ' + actual : t('Menunggu video');
     const available = streamFormats.resolutions?.[0];
     $('#streamInfo').textContent = [actual ? actual + ' ' + t('AKTIF') : t("MENYIAPKAN VIDEO"), available ? t('SUMBER') + ' ' + qualityLabel(available) : '', streamFormats.atmos ? t("ATMOS DI SUMBER") : ''].filter(Boolean).join(' · ');
     if (status.playing) $('#playerNote').textContent = t("Selamat menonton.") + (status.skipped ? t(" Iklan dilewati otomatis.") : '');
@@ -679,10 +791,10 @@ function handlePlayerStatus(status) {
 desktop?.onPlayerStatus(handlePlayerStatus);
 window.addEventListener('scroll', () => $('#nav').classList.toggle('solid', scrollY > 35), { passive: true });
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') { if (playback) closePlayer(); else if (!$('#modal').classList.contains('hidden')) closeModal(); }
+  if (event.key === 'Escape') { if (!$('#modal').classList.contains('hidden')) closeModal(); else if (playback) closePlayer(); }
   if (event.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && !playback && $('#modal').classList.contains('hidden')) { event.preventDefault(); $('#search').focus(); }
   if (event.key === 'Tab' && !$('#modal').classList.contains('hidden')) {
-    const nodes = [...$('#dialog').querySelectorAll('button:not(:disabled),select:not(:disabled),a[href]')].filter(node => node.getClientRects().length);
+    const nodes = [...$('#dialog').querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]')].filter(node => node.getClientRects().length);
     const first = nodes[0], last = nodes.at(-1);
     if (event.shiftKey && (document.activeElement === first || document.activeElement === $('#modal'))) { event.preventDefault(); last?.focus(); }
     else if (!event.shiftKey && (document.activeElement === last || document.activeElement === $('#modal'))) { event.preventDefault(); first?.focus(); }

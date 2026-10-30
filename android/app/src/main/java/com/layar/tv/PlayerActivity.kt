@@ -68,6 +68,8 @@ class PlayerActivity : AppCompatActivity() {
             isFocusable = true
             isFocusableInTouchMode = true
             setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            isVerticalScrollBarEnabled = false
+            isHorizontalScrollBarEnabled = false
         }
         setContentView(webView)
 
@@ -94,7 +96,7 @@ class PlayerActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) settings.safeBrowsingEnabled = false
 
         val playerCSS = """
-            html,body{background:#000!important;scrollbar-width:none!important}
+            html,body{background:#000!important}*{scrollbar-width:none!important;-ms-overflow-style:none!important}*::-webkit-scrollbar{display:none!important}
             body.layar-player-active{overflow:hidden!important}
             body.layar-player-active *{visibility:hidden!important}
             body.layar-player-active [data-layar-player],body.layar-player-active [data-layar-player] *{visibility:visible!important}
@@ -111,7 +113,12 @@ class PlayerActivity : AppCompatActivity() {
             put("css", encodedCSS)
             put("blockAds", blockAds)
         }
-        val injectScript = "$playerTools\ninstallLayarPlayer($toolOptions);"
+        val streamTools = assets.open("stream-tools.js").bufferedReader().use { it.readText() }
+        val streamOptions = JSONObject().apply {
+            put("language", getSharedPreferences("layar_prefs", MODE_PRIVATE).getString("language", "id"))
+            put("inspectManifests", true)
+        }
+        val injectScript = "$playerTools\ninstallLayarPlayer($toolOptions);\n$streamTools\nLayarStream.installControls($streamOptions);"
 
         fun injectTools() {
             webView.evaluateJavascript(injectScript, null)
@@ -285,7 +292,6 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
             KeyEvent.KEYCODE_MEDIA_PLAY,
             KeyEvent.KEYCODE_MEDIA_PAUSE -> {
@@ -295,7 +301,6 @@ class PlayerActivity : AppCompatActivity() {
                 )
                 return true
             }
-            KeyEvent.KEYCODE_DPAD_LEFT,
             KeyEvent.KEYCODE_MEDIA_REWIND -> {
                 webView.evaluateJavascript(
                     "document.querySelectorAll('video').forEach(function(v){ v.currentTime = Math.max(0, v.currentTime - 10); });",
@@ -303,7 +308,6 @@ class PlayerActivity : AppCompatActivity() {
                 )
                 return true
             }
-            KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
                 webView.evaluateJavascript(
                     "document.querySelectorAll('video').forEach(function(v){ v.currentTime += 10; });",
@@ -316,7 +320,9 @@ class PlayerActivity : AppCompatActivity() {
                     hideCustomView()
                     return true
                 }
-                finish()
+                webView.evaluateJavascript(
+                    "(function(){var p=document.getElementById('layar-stream-panel');if(p && !p.hidden){document.querySelector('#layar-stream-controls [data-close]').click();return true;}return false;})()"
+                ) { handled -> if (handled != "true") finish() }
                 return true
             }
         }

@@ -20,3 +20,5 @@ dist/apk/
 dist/windows/
 dist/downloads/
 dist/marketing/
+
+android/app/src/main/assets/stream-tools.js

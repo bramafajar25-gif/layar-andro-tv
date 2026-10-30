@@ -9,6 +9,7 @@ const { isAdRequest, isStreamURL, parseManifest, nativeArgs, nativeFileArgs } = 
 const { installPlayerTools, playerSnapshot } = require('./player-tools.cjs');
 const { createI18n } = require('../i18n.js');
 const ROOT = path.resolve(__dirname, '..');
+const streamToolsScript = fs.readFileSync(path.join(ROOT, 'stream-tools.js'), 'utf8');
 const HOME = pathToFileURL(path.join(ROOT, 'index.html')).href;
 fs.mkdirSync(path.join(ROOT, '.runtime', 'profile'), { recursive: true });
 app.setPath('userData', path.join(ROOT, '.runtime', 'profile'));
@@ -16,6 +17,7 @@ app.setName('Layar');
 app.setAppUserModelId('com.layar.app');
 nativeTheme.themeSource = 'dark';
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+const inspectedStreams = new Set();
 let win, player, rect, playerGeneration = 0, monitor, streamURL = '', streamMetadata = {}, nativeProcess;
 const settingsPath = path.join(ROOT, '.runtime', 'profile', 'playback.json');
 let settings = { quality: 'auto', blockAds: true, passthrough: false, nativePath: '', language: 'id' };
@@ -35,12 +37,13 @@ function fitPlayer() {
 }
 function closePlayer() {
   playerGeneration++;
+  inspectedStreams.clear();
   clearInterval(monitor); monitor = null; streamURL = ''; streamMetadata = {};
   if (nativeProcess) { nativeProcess.kill(); nativeProcess = null; }
   if (player) { player.webContents.session.webRequest.onBeforeRequest(null); player.webContents.session.webRequest.onHeadersReceived(null); win?.contentView.removeChildView(player); player.webContents.close(); player = null; }
 }
 const playerCSS = `
-  html,body{background:#000!important;scrollbar-width:none!important}
+  html,body{background:#000!important}*{scrollbar-width:none!important;-ms-overflow-style:none!important}*::-webkit-scrollbar{display:none!important}
   body.layar-player-active{overflow:hidden!important}
   body.layar-player-active *{visibility:hidden!important}
   body.layar-player-active [data-layar-player],body.layar-player-active [data-layar-player] *{visibility:visible!important}
@@ -49,10 +52,11 @@ const playerCSS = `
   [data-layar-player] .hero-player-frame{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;margin:0!important;transform:none!important;border-radius:0!important}
 `;
 async function captureStream(contents, url, generation) {
-  if (generation !== playerGeneration || !isStreamURL(url) || streamURL) return;
+  if (generation !== playerGeneration || !isStreamURL(url) || inspectedStreams.has(url) || inspectedStreams.size >= 24) return;
+  inspectedStreams.add(url);
   try { if ((await contents.executeJavaScript(`(${playerSnapshot.toString()})()`)).advertisement) return; } catch { return; }
-  if (generation !== playerGeneration || streamURL) return;
-  streamURL = url;
+  if (generation !== playerGeneration) return;
+  if (!streamURL) streamURL = url;
   status({ state: 'stream', externalReady: true });
   try {
     const response = await contents.session.fetch(url, { headers: { Referer: SOURCE + '/', 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(10000) });
@@ -62,7 +66,9 @@ async function captureStream(contents, url, generation) {
       while (true) { const next = await reader.read(); if (next.done) break; size += next.value.length; if (size > 262144) return; text += decoder.decode(next.value, { stream: true }); }
     } finally { await reader.cancel().catch(() => {}); }
     if (generation !== playerGeneration) return;
-    streamMetadata = parseManifest(text);
+    const parsed = parseManifest(text);
+    if (parsed.resolutions.length || parsed.audioFormats.length) { streamMetadata = parsed; streamURL = url; }
+    await contents.executeJavaScript(`window.LayarStream?.receiveManifest(${JSON.stringify(text)});`);
     status({ state: 'stream', externalReady: true, ...streamMetadata });
   } catch { /* The source player can continue when manifest inspection is unavailable. */ }
 }
@@ -161,6 +167,7 @@ ipcMain.handle('layar:play', async (event, options) => {
       const current = new URL(contents.getURL());
       if (current.origin === SOURCE) {
         await contents.insertCSS(playerCSS);
+        await contents.executeJavaScript(streamToolsScript);
         await contents.executeJavaScript(`(${installPlayerTools.toString()})(${JSON.stringify({ blockAds: settings.blockAds })})`);
       }
       if (generation === playerGeneration) status({ state: 'loaded' });
@@ -174,12 +181,27 @@ ipcMain.handle('layar:play', async (event, options) => {
   monitor = setInterval(async () => {
     if (inspecting || contents.isDestroyed() || generation !== playerGeneration) return;
     inspecting = true;
-    try { const data = await contents.executeJavaScript(`(${playerSnapshot.toString()})()`); if (generation === playerGeneration) status({ state: 'metrics', externalReady: !!streamURL, ...data }); } catch {} finally { inspecting = false; }
+    try { const data = await contents.executeJavaScript(`({...(${playerSnapshot.toString()})(), quality: window.LayarStream?.snapshot()})`); if (generation === playerGeneration) status({ state: 'metrics', externalReady: !!streamURL, ...data }); } catch {} finally { inspecting = false; }
   }, 3000);
   fitPlayer();
   status({ state: 'loading' });
   contents.loadURL(url).catch(() => {});
   return { url };
+});
+ipcMain.handle('layar:player-quality', async (event, id) => {
+  trusted(event);
+  if (!player || player.webContents.isDestroyed()) return { levels: [], canSelect: false };
+  const contents = player.webContents;
+  if (id !== undefined) {
+    if (typeof id !== 'string' || !/^-?\d{1,4}$/.test(id)) throw new Error('Invalid quality');
+    const applied = await contents.executeJavaScript(`window.LayarStream?.setQuality(${JSON.stringify(id)}) || false`);
+    if (!applied) throw new Error('Gunakan menu kualitas player sumber.');
+  }
+  return contents.executeJavaScript('window.LayarStream?.snapshot() || {levels:[],canSelect:false}');
+});
+ipcMain.handle('layar:player-visible', (event, visible) => {
+  trusted(event);
+  if (typeof visible === 'boolean') player?.setVisible(visible);
 });
 ipcMain.handle('layar:close-player', event => { trusted(event); closePlayer(); });
 ipcMain.handle('layar:fullscreen', event => { trusted(event); win.setFullScreen(!win.isFullScreen()); });

@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createClient } = require('./desktop/source.cjs');
 const client = createClient();
-const files = { '/': ['index.html', 'text/html'], '/index.html': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/i18n.js': ['i18n.js', 'text/javascript'], '/cinema.css': ['cinema.css', 'text/css'], '/layar.ico': ['layar.ico', 'image/x-icon'] };
+const files = { '/': ['index.html', 'text/html'], '/index.html': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/stream-tools.js': ['stream-tools.js', 'text/javascript'], '/i18n.js': ['i18n.js', 'text/javascript'], '/cinema.css': ['cinema.css', 'text/css'], '/layar.ico': ['layar.ico', 'image/x-icon'] };
 http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://127.0.0.1');

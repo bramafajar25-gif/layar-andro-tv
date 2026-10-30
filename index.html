@@ -8,6 +8,7 @@
   <link rel="icon" href="layar.ico">
   <link rel="stylesheet" href="cinema.css">
   <script defer src="i18n.js"></script>
+  <script defer src="stream-tools.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -110,7 +111,9 @@
       <button id="playerBack" class="icon-button" aria-label="Tutup player" data-i18n-aria-label="Tutup player"><svg class="icon"><use href="#i-arrow"/></svg></button>
       <div class="player-heading"><span id="playerTitle"></span><small id="playerSubtitle"></small></div>
       <span id="streamInfo" class="player-source" data-i18n="MENYIAPKAN VIDEO">MENYIAPKAN VIDEO</span>
+      <span id="audioInfo" class="subtitle-info" role="status"></span>
       <span id="subtitleInfo" class="subtitle-info" data-i18n="Subtitle: cek menu CC" title="Belum dapat memastikan sub Indo. Pilih Indonesia / Indonesian di menu CC atau Subtitle jika tersedia." data-i18n-title="Belum dapat memastikan sub Indo. Pilih Indonesia / Indonesian di menu CC atau Subtitle jika tersedia.">Subtitle: cek menu CC</span>
+      <button id="playerQuality" class="icon-button" aria-label="Kualitas video dan audio" data-i18n-aria-label="Kualitas video dan audio" title="Kualitas video dan audio"><svg class="icon"><use href="#i-sliders"/></svg></button>
       <button id="playerSidebar" class="icon-button" aria-label="Tampilkan atau sembunyikan episode" data-i18n-aria-label="Tampilkan atau sembunyikan episode" title="Daftar episode" data-i18n-title="Daftar episode"><svg class="icon"><use href="#i-grid"/></svg></button>
       <button id="fullscreen" class="icon-button" aria-label="Layar penuh" data-i18n-aria-label="Layar penuh"><svg class="icon"><use href="#i-expand"/></svg></button>
     </div>

@@ -24,6 +24,7 @@ function title(raw, fallbackType) {
     id: item.id, type, slug: item.slug, title: item.title || item.name || '', overview: item.overview || '',
     poster: item.posterPath || '', backdrop: item.backdropPath || '', logo: item.logoPath || '',
     year: (item.releaseDate || item.firstAirDate || '').slice(0, 4), rating: Number(item.voteAverage) || 0,
+    certification: typeof item.certification === 'string' ? item.certification : '',
     runtime: item.runtime || null, quality: item.quality || '', numberOfSeasons: item.numberOfSeasons || 0,
     genres: (item.genres || []).map(g => typeof g === 'string' ? g : g.name).filter(Boolean),
     cast: (item.cast || []).slice(0, 8).map(c => c.name).filter(Boolean), director: item.director || '',

@@ -8,12 +8,21 @@ Buka [halaman Releases](https://github.com/bramafajar25-gif/layar-andro-tv/relea
 
 | Perangkat | File download | Cara menjalankan |
 | --- | --- | --- |
-| Laptop Windows x64 | `Layar-Windows-Laptop-v3.0.3-x64.zip` | Ekstrak seluruh ZIP, buka `Layar.exe`. Tidak perlu Node.js/npm. |
-| HP Android / Android TV | `Layar-Android-TV-Mobile-v3.0.3.apk` | Pasang APK di Android. APK yang sama mendukung HP dan TV. |
+| Laptop Windows x64 | `Layar-Windows-Laptop-v3.0.4-x64.zip` | Ekstrak seluruh ZIP, buka `Layar.exe`. Tidak perlu Node.js/npm. |
+| HP Android / Android TV | `Layar-Android-TV-Mobile-v3.0.4.apk` | Pasang APK di Android. APK yang sama mendukung HP dan TV. |
 
 Paket Windows dan Android terpisah. Jangan pilih arsip **Source code** untuk pemasangan biasa. Jika release terbaru masih dibuild, cek [progres build](https://github.com/bramafajar25-gif/layar-andro-tv/actions/workflows/build-apk.yml). Release baru diterbitkan setelah kedua paket berhasil dibuat.
 
 APK memakai debug key CI. Jika update APK lama ditolak karena tanda tangan berbeda, instalasi lama perlu dihapus terlebih dahulu (data lokal ikut terhapus).
+
+## Episode dan kualitas player
+
+- Scrollbar disembunyikan di katalog, modal, daftar episode, dan player; scrolling tetap tersedia.
+- Detail series menggunakan backdrop, tab Overview / Episodes / Details, timeline season, dan kartu episode dengan durasi. Status **Pernah diputar** mencatat episode yang dibuka, bukan klaim selesai menonton.
+- Katalog HP mengikuti orientasi perangkat; player Android tetap landscape. Android TV memakai fokus D-Pad dan efek tanpa blur berat.
+- Tombol **Kualitas video dan audio** di player laptop dan **Kualitas & audio** di Android menampilkan resolusi aktif serta format audio yang berhasil dibaca dari manifest HLS. Format di manifest tidak menjamin keluaran speaker.
+- Auto / 720p / 1080p / 4K hanya ditawarkan jika player sumber mengekspos pilihan itu. Bila API kualitas tidak tersedia, gunakan menu kualitas bawaan sumber; tidak ada peningkatan resolusi buatan.
+- Toggle passthrough di popup laptop berlaku pada sesi mpv berikutnya. WebView Android belum mendukung passthrough; toggle-nya dinonaktifkan dengan penjelasan.
 
 ## Menjalankan source di laptop
 

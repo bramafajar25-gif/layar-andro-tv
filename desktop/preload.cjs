@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('layarDesktop', {
   native: () => ipcRenderer.invoke('layar:native'),
   openFile: () => ipcRenderer.invoke('layar:open-file'),
   play: options => ipcRenderer.invoke('layar:play', options),
+  playerQuality: id => ipcRenderer.invoke('layar:player-quality', id),
+  playerVisible: visible => ipcRenderer.invoke('layar:player-visible', visible),
   bounds: rect => ipcRenderer.send('layar:bounds', rect),
   closePlayer: () => ipcRenderer.invoke('layar:close-player'),
   fullscreen: () => ipcRenderer.invoke('layar:fullscreen'),

@@ -52,6 +52,9 @@ class MainActivity : AppCompatActivity() {
             setBackgroundColor(Color.parseColor("#141414"))
             isFocusable = true
             isFocusableInTouchMode = true
+            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            isVerticalScrollBarEnabled = false
+            isHorizontalScrollBarEnabled = false
         }
         setContentView(webView)
 

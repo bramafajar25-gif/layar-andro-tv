@@ -4,6 +4,27 @@
   else root.LayarI18n = factory();
 })(globalThis, function() {
   const messages = {
+  "Audio belum terdeteksi": "Audio not detected",
+  "Audio sumber": "Source audio",
+  "Resolusi aktif": "Active resolution",
+  "Menunggu video": "Waiting for video",
+  "Resolusi": "Resolution",
+  "Auto menyesuaikan kualitas dengan koneksi.": "Auto adapts quality to your connection.",
+  "Menu kualitas sumber": "Source quality menu",
+  "Player ini tidak mengekspos pilihan kualitas. Gunakan menu kualitas pada video.": "This player does not expose quality choices. Use the quality menu on the video.",
+  "Resolusi di manifest": "Manifest resolutions",
+  "Belum terdeteksi": "Not detected",
+  "Format audio di sumber; keluaran speaker mengikuti perangkat.": "Source audio formats; speaker output depends on your device.",
+  "Berlaku saat berikutnya membuka mpv. Memerlukan perangkat HDMI dan track yang mendukung.": "Applies when you next open mpv. Requires a compatible HDMI device and audio track.",
+  "Passthrough tersedia melalui mpv di laptop. Hubungkan mpv lewat Pengaturan.": "Passthrough is available through mpv on laptops. Connect mpv in Settings.",
+
+  "Overview": "Overview",
+  "Episodes": "Episodes",
+  "Details": "Details",
+  "Pilih season, lalu episode yang ingin kamu tonton.": "Choose a season, then an episode to watch.",
+  "Terakhir diputar": "Last played",
+  "Pernah diputar": "Previously played",
+  "Kualitas dan audio mengikuti stream yang diputar.": "Quality and audio depend on the playing stream.",
   "Beranda": "Home",
   "Series": "Series",
   "Film": "Movies",

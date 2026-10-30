@@ -332,3 +332,68 @@ body.tv-mode{--gutter:4%;font-size:18px}
 @media(prefers-reduced-motion:reduce){
   *,*:before,*:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}
 }
+/* Scrollbars are hidden without changing scroll or touch behavior. */
+html,body,*{scrollbar-width:none!important;-ms-overflow-style:none!important}
+*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
+[hidden]{display:none!important}
+
+/* Series detail: editorial copy, cinematic artwork, and a season rail. */
+.dialog.concept-dialog{width:min(1360px,100%);background:#101112;backdrop-filter:none}
+.concept-detail{position:relative;isolation:isolate;min-height:620px}
+.concept-backdrop{position:absolute;inset:0;z-index:-1;background-position:48% center;background-size:cover;opacity:.65}
+.concept-backdrop:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#08090bf5 0%,#08090b70 43%,#08090b55 65%,#08090bd9 100%),linear-gradient(0deg,#08090b,transparent 65%)}
+.concept-layout{display:grid;grid-template-columns:minmax(0,38fr) minmax(60px,28fr) minmax(0,34fr);gap:22px;padding:84px 34px 30px;min-height:680px}
+.concept-left{display:flex;flex-direction:column;justify-content:center;min-width:0;padding:25px 0 0}
+.concept-title h2{font:800 clamp(30px,3.7vw,58px)/1.04 Impact,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.02em;margin:18px 0}
+.concept-logo{width:100%;max-width:380px;max-height:150px;object-fit:contain;object-position:left;margin:18px 0}
+.concept-panels{min-height:150px}.concept-panels .detail-synopsis{font-size:14px;line-height:1.7;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.concept-panels .detail-meta-col p{font-size:13px;color:#bbb}.concept-panels .detail-meta-col b{color:#eee}
+.concept-actions{flex-wrap:wrap;gap:10px}.concept-actions .btn{min-height:44px;padding:0 18px;border-radius:24px;font-size:13px}
+.concept-actions .primary{background:var(--accent);color:#fff}
+.detail-tabs{display:flex;gap:24px;margin-top:auto;padding-top:48px}
+.detail-tabs button{min-height:44px;background:none;padding:12px 0;font-size:12px;color:#aaa;border-bottom:2px solid transparent}
+.detail-tabs button[aria-selected=true]{color:#fff;border-color:var(--accent)}
+.concept-center{display:grid;place-items:center}
+.concept-play{display:grid;place-items:center;width:64px;height:64px;border:1px solid #fff9;border-radius:50%;background:#0b0b0b60;color:var(--accent)}
+.concept-play .icon{width:26px;height:26px}
+.concept-episodes{display:grid;grid-template-columns:94px minmax(0,1fr);gap:18px;border:0;padding:0;min-width:0;align-self:stretch}
+.season-timeline{display:flex;flex-direction:column;gap:6px;align-self:start;max-height:65vh;overflow:auto;padding:8px 8px 8px 0;border-right:1px solid #ffffff45}
+.season-timeline button{position:relative;flex-shrink:0;min-height:44px;background:none;color:#aaa;font-size:12px;text-align:right;padding:8px 12px 8px 4px;border-right:2px solid transparent}
+.season-timeline button[aria-pressed=true]{color:#fff;border-right-color:var(--accent)}
+.season-timeline button[aria-pressed=true]:after{content:"";position:absolute;right:-5px;top:calc(50% - 4px);width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px #e5091455}
+.concept-episode-list{max-height:65vh;overflow:auto;min-height:250px;padding:6px 8px 14px}
+.concept-episode-list .episode-heading{position:sticky;top:-6px;z-index:2;background:#101112ed;padding:10px 0;margin:0 0 12px;justify-content:space-between;gap:8px}
+.concept-episode-list h3{font-size:16px;margin:0}.concept-episode-list .episode-count{font-size:11px}
+.concept-episode-list .episode{display:block;position:relative;border:0;border-radius:8px;padding:0;margin-bottom:18px;background:#151719;overflow:hidden}
+.concept-episode-list .episode:hover,.concept-episode-list .episode:focus-visible{transform:translate3d(0,-2px,0);outline:2px solid #fff;outline-offset:2px}
+.concept-episode-list .ep-art{display:block;width:100%;aspect-ratio:16/9;border-radius:8px 8px 0 0}
+.concept-episode-list .ep-number{position:absolute;left:10px;top:10px;z-index:1;font-size:12px;color:#fff;background:#1119;border-radius:4px;width:auto;padding:4px 7px}
+.concept-episode-list .ep-info{display:block;padding:10px 12px 12px}.concept-episode-list .ep-title{font-size:13px}.concept-episode-list .ep-overview,.concept-episode-list .ep-runtime{display:none}
+.concept-episode-list .ep-play-overlay{opacity:1;background:transparent}
+.concept-episode-list .ep-play-overlay .icon{width:42px;height:42px;padding:11px;border:1px solid #ffffff85;background:#09090966;border-radius:50%}
+.ep-duration-badge{position:absolute;right:8px;bottom:8px;padding:4px 6px;background:#080808c9;border-radius:4px;font-size:10px;color:#fff}
+.episode-status{display:flex;align-items:center;gap:5px;font-size:11px;color:#bbb;margin-top:6px}.episode-status .icon{width:13px;height:13px;color:#e50914}
+.episode:focus-visible .ep-play-overlay{opacity:1}
+.card{will-change:auto}.card:focus-visible,.episode:focus-visible{will-change:transform}
+.tv-mode :is(header,.search,.dialog,.hero-info,.hero-save,.hero-maturity,.nav-menu){backdrop-filter:none!important}
+.tv-mode .dialog{animation:none}.tv-mode .card:focus,.tv-mode .card:focus-visible{transform:translate3d(0,-3px,0) scale(1.025)!important;will-change:transform;box-shadow:none!important}
+.tv-mode .concept-backdrop{opacity:.5}.tv-mode .concept-panels .detail-synopsis{font-size:16px}.tv-mode .season-timeline button{font-size:14px}
+@media(max-width:850px){
+  .overlay{padding:12px 10px}.concept-layout{grid-template-columns:1fr;padding:78px 22px 24px;gap:24px;min-height:0}
+  .concept-left{padding-top:60px}.concept-title h2{font-size:38px}.concept-logo{max-height:120px;width:80%}
+  .concept-center{display:none}.concept-panels{min-height:0}.detail-tabs{padding-top:24px;gap:28px;margin-top:0}
+  .concept-backdrop{height:580px;background-position:55% top}.concept-backdrop:after{background:linear-gradient(0deg,#101112 0%,#08090ba0 50%,#08090b33 100%)}
+  .concept-episodes{grid-template-columns:1fr;gap:14px}.season-timeline{flex-direction:row;max-height:none;border-right:0;border-bottom:1px solid #ffffff45;padding:0 0 5px}
+  .season-timeline button{text-align:center;border-right:0;border-bottom:2px solid transparent;padding:10px 14px}
+  .season-timeline button[aria-pressed=true]{border-bottom-color:var(--accent)}.season-timeline button[aria-pressed=true]:after{right:calc(50% - 4px);top:auto;bottom:-5px}
+  .concept-episode-list{max-height:none;overflow:visible;padding:0}.concept-episode-list .episode-heading{position:static;background:none}
+  .concept-episode-list #detailEpisodes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.concept-episode-list .episode{margin:0}
+  .concept-episode-list .ep-title{font-size:12px}.concept-actions .btn{padding:0 14px}.concept-actions .icon-button{width:40px;height:40px}
+}
+@media(max-width:420px){.concept-episode-list #detailEpisodes{grid-template-columns:1fr}.concept-panels .detail-synopsis{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.card:focus-visible,.episode:focus-visible{will-change:auto}}
+.overlay{z-index:90}
+.player-quality-menu{max-width:640px;margin:auto}.player-quality-menu h2{padding-right:30px}
+.audio-format-badge{display:inline-block;border:1px solid #ffffff45;border-radius:6px;padding:10px 14px;font-size:14px;color:#fff}
+.player-top{gap:12px}.player-source{letter-spacing:.4px;font-size:10px}.player-top .subtitle-info{max-width:180px;font-size:10px;line-height:1.5}
+@media(max-width:768px){.settings-body{padding:50px 22px 25px}.settings-row{gap:12px}.settings-row select{min-width:100px;max-width:48%}.player-top{padding:8px 12px;gap:6px;height:auto;min-height:76px;flex-wrap:wrap}.player-heading{flex:1}.player-top .subtitle-info{max-width:120px}.player-aside{width:220px}.player-bottom{flex-wrap:wrap;gap:12px;padding:10px 12px}}
