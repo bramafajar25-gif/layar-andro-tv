@@ -2,12 +2,14 @@
   "name": "layar-desktop",
   "version": "3.0.5",
   "private": true,
-  "description": "Layar — katalog dan player desktop",
+  "description": "Layar \u2014 katalog dan player desktop",
   "main": "desktop/main.cjs",
   "scripts": {
     "start": "node desktop/start.cjs",
     "test": "node --test tests/*.test.cjs",
-    "package:windows": "node scripts/package-windows.cjs"
+    "package:windows": "node scripts/package-windows.cjs",
+    "test:episodes-browser": "node scripts/test-episodes-browser.cjs",
+    "test:sound-browser": "node scripts/test-sound-browser.cjs"
   },
   "devDependencies": {
     "electron": "^42.0.0"

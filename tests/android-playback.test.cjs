@@ -46,7 +46,7 @@ function fixture(desktopBridge, responseData = { episodes: [] }) {
 test('Android Play reaches the native movie player without the Electron bounds API', async () => {
   const { context, calls, values } = fixture();
   await vm.runInContext("startPlayback({type:'movie', slug:'the-hunt-2012', title:'The Hunt', year:2012})", context);
-  assert.deepEqual(calls, [{ type: 'movie', slug: 'the-hunt-2012' }]);
+  assert.deepEqual(calls, [{ type: 'movie', slug: 'the-hunt-2012', seasons: [] }]);
   assert.equal(JSON.parse(values.get('layar.v2.history'))[0].item.slug, 'the-hunt-2012');
   assert.doesNotThrow(() => vm.runInContext('updateBounds()', context));
 });
@@ -54,7 +54,7 @@ test('Android Play reaches the native movie player without the Electron bounds A
 test('Android TV Play forwards the selected season and episode to the native player', async () => {
   const { context, calls } = fixture();
   await vm.runInContext("startPlayback({type:'tv_series', slug:'the-mentalist-2008', title:'The Mentalist', seasons:[{number:7}]}, 7, {number:13, title:'White Orchids', available:true})", context);
-  assert.deepEqual(calls, [{ type: 'tv_series', slug: 'the-mentalist-2008', season: 7, episode: 13 }]);
+  assert.deepEqual(calls, [{ type: 'tv_series', slug: 'the-mentalist-2008', season: 7, episode: 13, seasons: [{ number: 7 }] }]);
 });
 
 test('Android API exposes source errors even when the native bridge returns an HTTP 200 JSON envelope', async () => {
@@ -90,4 +90,13 @@ test('a desktop bounds failure is surfaced by the player instead of leaving an u
   });
   await vm.runInContext("startPlayback({type:'movie', slug:'the-hunt-2012', title:'The Hunt'})", context);
   assert.match(node('#playerMessage').innerHTML, /Bounds unavailable/);
+});
+
+
+test('poster instant play mounts the movie player without opening details', async () => {
+  const { context, calls, node } = fixture();
+  await vm.runInContext("playTitle({type:'movie',slug:'example',title:'Example'})", context);
+  assert.equal(calls[0].slug, 'example');
+  assert.equal(node('#modal').classList.contains('hidden'), true);
+  assert.equal(node('#player').classList.contains('hidden'), false);
 });

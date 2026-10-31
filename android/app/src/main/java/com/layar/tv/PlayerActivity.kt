@@ -12,6 +12,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
 import android.webkit.WebChromeClient
@@ -113,12 +114,30 @@ class PlayerActivity : AppCompatActivity() {
             put("css", encodedCSS)
             put("blockAds", blockAds)
         }
+        val episodeTools = assets.open("episode-selector.js").bufferedReader().use { it.readText() }
+        val episodePrefs = getSharedPreferences("layar_episode_progress", MODE_PRIVATE)
+        webView.addJavascriptInterface(object {
+            @JavascriptInterface fun getEpisodeProgress(key: String): String =
+                if (key.matches(Regex("[a-z0-9-]+:[0-9]+:[0-9]+"))) episodePrefs.getString(key, "{}") ?: "{}" else "{}"
+            @JavascriptInterface fun saveEpisodeProgress(key: String, value: String) {
+                if (!key.matches(Regex("[a-z0-9-]+:[0-9]+:[0-9]+")) || value.length > 256) return
+                try {
+                    val data = JSONObject(value)
+                    val time = data.optDouble("time", -1.0)
+                    val duration = data.optDouble("duration", -1.0)
+                    if (time.isFinite() && duration.isFinite() && time >= 0 && duration > 0) {
+                        episodePrefs.edit().putString(key, JSONObject().put("time", time).put("duration", duration).toString()).apply()
+                    }
+                } catch (_: Exception) {}
+            }
+        }, "LayarEpisodeProgress")
         val streamTools = assets.open("stream-tools.js").bufferedReader().use { it.readText() }
         val streamOptions = JSONObject().apply {
             put("language", getSharedPreferences("layar_prefs", MODE_PRIVATE).getString("language", "id"))
             put("inspectManifests", true)
+            put("playback", JSONObject(intent.getStringExtra(EXTRA_OPTIONS) ?: "{}"))
         }
-        val injectScript = "$playerTools\ninstallLayarPlayer($toolOptions);\n$streamTools\nLayarStream.installControls($streamOptions);"
+        val injectScript = "$playerTools\ninstallLayarPlayer($toolOptions);\n$episodeTools\n$streamTools\nLayarStream.installControls($streamOptions);"
 
         fun injectTools() {
             webView.evaluateJavascript(injectScript, null)
@@ -290,6 +309,19 @@ class PlayerActivity : AppCompatActivity() {
         webView.loadUrl(playbackUrl)
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Native fullscreen surfaces cover DOM controls. Return to the inline video
+        // before handing directional focus to the playback settings button.
+        if (customView != null && event.action == KeyEvent.ACTION_DOWN &&
+            (event.keyCode == KeyEvent.KEYCODE_DPAD_UP || event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN || event.keyCode == KeyEvent.KEYCODE_MENU)) {
+            hideCustomView()
+            webView.requestFocus()
+            webView.evaluateJavascript("document.querySelector('#layar-stream-controls [data-toggle]')?.focus();", null)
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when (keyCode) {
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
@@ -321,7 +353,7 @@ class PlayerActivity : AppCompatActivity() {
                     return true
                 }
                 webView.evaluateJavascript(
-                    "(function(){var p=document.getElementById('layar-stream-panel');if(p && !p.hidden){document.querySelector('#layar-stream-controls [data-close]').click();return true;}return false;})()"
+                    "(function(){var e=document.getElementById('layar-episode-panel');if(e && !e.hidden){document.querySelector('[data-episode-close]').click();return true;}var p=document.getElementById('layar-stream-panel');if(p && !p.hidden){document.querySelector('#layar-stream-controls [data-close]').click();return true;}return false;})()"
                 ) { handled -> if (handled != "true") finish() }
                 return true
             }

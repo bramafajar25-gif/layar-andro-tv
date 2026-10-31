@@ -17,7 +17,7 @@ fs.cpSync(runtime, target, { recursive: true, filter: file => !file.endsWith('.l
 fs.renameSync(path.join(target, 'electron.exe'), path.join(target, 'Layar.exe'));
 const app = path.join(target, 'resources', 'app');
 fs.mkdirSync(app, { recursive: true });
-for (const file of ['index.html', 'app.js', 'stream-tools.js', 'cinema.css', 'i18n.js', 'layar.ico']) {
+for (const file of ['index.html', 'app.js', 'stream-tools.js', 'episode-selector.js', 'cinema.css', 'i18n.js', 'layar.ico']) {
   fs.copyFileSync(path.join(root, file), path.join(app, file));
 }
 fs.cpSync(path.join(root, 'desktop'), path.join(app, 'desktop'), { recursive: true });

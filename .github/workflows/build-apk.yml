@@ -56,7 +56,7 @@ jobs:
       - name: Sync shared catalogue to Android assets
         run: |
           mkdir -p android/app/src/main/assets
-          cp index.html app.js stream-tools.js cinema.css i18n.js layar.ico android/app/src/main/assets/
+          cp index.html app.js stream-tools.js episode-selector.js cinema.css i18n.js layar.ico android/app/src/main/assets/
       - name: Build and lint Android
         working-directory: android
         run: |

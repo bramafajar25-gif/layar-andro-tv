@@ -4,6 +4,8 @@
   else root.LayarI18n = factory();
 })(globalThis, function() {
   const messages = {
+  "Pilih Episode": "Choose Episode",
+  "Kualitas & Suara": "Playback Quality",
   "Audio belum terdeteksi": "Audio not detected",
   "Audio sumber": "Source audio",
   "Resolusi aktif": "Active resolution",
@@ -15,6 +17,19 @@
   "Resolusi di manifest": "Manifest resolutions",
   "Belum terdeteksi": "Not detected",
   "Format audio di sumber; keluaran speaker mengikuti perangkat.": "Source audio formats; speaker output depends on your device.",
+  "Asli": "Original",
+  "Mode suara": "Sound mode",
+  "tidak tersedia": "unavailable",
+  "Surround membagi suara ke 5.1 channel. Di headphone atau speaker stereo, channel itu dirender jadi surround 3D.": "Surround splits the sound into 5.1 channels. On headphones or stereo speakers, those channels are rendered as 3D surround.",
+  "Suara asli dari sumber, tanpa diolah.": "Original source sound, unprocessed.",
+  "Aktif: suara dibagi ke 6 speaker 5.1.": "Active: sound is split across 6 speakers in 5.1.",
+  "Aktif: surround 3D virtual untuk headphone atau speaker stereo.": "Active: virtual 3D surround for headphones or stereo speakers.",
+  "Mode suara belum bisa diganti.": "The sound mode could not be changed.",
+  "Player sumber ini tidak mengizinkan suaranya diolah.": "This source player does not allow its sound to be processed.",
+  "Film ini tidak punya track Dolby Atmos. Pilih Surround 5.1.": "This title has no Dolby Atmos track. Choose Surround 5.1.",
+  "Sumber punya track Atmos, tapi player ini tidak bisa memutar Dolby Digital Plus. Gunakan mpv dengan passthrough.": "The source has an Atmos track, but this player cannot play Dolby Digital Plus. Use mpv with passthrough.",
+  "Sumber punya track Atmos, tapi player sumber tidak menampilkannya.": "The source has an Atmos track, but the source player does not expose it.",
+  "Audio belum bisa diaktifkan. Putar video dulu, lalu coba lagi.": "Audio could not be started. Play the video first, then try again.",
   "Berlaku saat berikutnya membuka mpv. Memerlukan perangkat HDMI dan track yang mendukung.": "Applies when you next open mpv. Requires a compatible HDMI device and audio track.",
   "Passthrough tersedia melalui mpv di laptop. Hubungkan mpv lewat Pengaturan.": "Passthrough is available through mpv on laptops. Connect mpv in Settings.",
 

@@ -168,7 +168,7 @@ ipcMain.handle('layar:play', async (event, options) => {
       if (current.origin === SOURCE) {
         await contents.insertCSS(playerCSS);
         await contents.executeJavaScript(streamToolsScript);
-        await contents.executeJavaScript(`(${installPlayerTools.toString()})(${JSON.stringify({ blockAds: settings.blockAds })})`);
+        await contents.executeJavaScript(`(${installPlayerTools.toString()})(${JSON.stringify({ blockAds: settings.blockAds, resumeTime: Number.isFinite(options.resumeTime) ? Math.max(0, options.resumeTime) : 0 })})`);
       }
       if (generation === playerGeneration) status({ state: 'loaded' });
     } catch { if (generation === playerGeneration) status({ state: 'loaded' }); }
@@ -198,6 +198,23 @@ ipcMain.handle('layar:player-quality', async (event, id) => {
     if (!applied) throw new Error('Gunakan menu kualitas player sumber.');
   }
   return contents.executeJavaScript('window.LayarStream?.snapshot() || {levels:[],canSelect:false}');
+});
+ipcMain.handle('layar:player-audio', async (event, id) => {
+  trusted(event);
+  if (!player || typeof id !== 'string' || !/^\d{1,4}$/.test(id)) throw new Error('Invalid audio track');
+  const applied = await player.webContents.executeJavaScript(`window.LayarStream?.setAudio(${JSON.stringify(id)}) || false`);
+  if (!applied) throw new Error('Track audio tidak tersedia.');
+});
+ipcMain.handle('layar:player-sound', async (event, mode) => {
+  trusted(event);
+  if (!player || player.webContents.isDestroyed() || !['original','surround','atmos'].includes(mode)) throw new Error('Invalid sound mode');
+  // A user gesture lets the source page start its AudioContext.
+  return player.webContents.executeJavaScript(`window.LayarStream?.setSoundMode(${JSON.stringify(mode)}) || {applied:false,reason:'no-video'}`, true);
+});
+ipcMain.handle('layar:player-backdrop', async event => {
+  trusted(event);
+  if (!player || player.webContents.isDestroyed()) return null;
+  return (await player.webContents.capturePage()).toDataURL();
 });
 ipcMain.handle('layar:player-visible', (event, visible) => {
   trusted(event);

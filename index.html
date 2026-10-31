@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="cinema.css">
   <script defer src="i18n.js"></script>
   <script defer src="stream-tools.js"></script>
+  <script defer src="episode-selector.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -99,7 +100,7 @@
     <div class="nav-end">
       <select id="language" class="language-select" aria-label="Bahasa tampilan" data-i18n-aria-label="Bahasa tampilan" title="Bahasa tampilan" data-i18n-title="Bahasa tampilan"><option value="id">ID</option><option value="en">EN</option></select>
       <button id="openFile" class="nav-icon" title="Buka file video di mpv" data-i18n-title="Buka file video di mpv" aria-label="Buka file video di mpv" data-i18n-aria-label="Buka file video di mpv"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span class="nav-label" data-i18n="Buka File">Buka File</span></button>
-      <button id="cinemaSettings" class="nav-icon" title="Kualitas video dan audio" data-i18n-title="Kualitas video dan audio" aria-label="Kualitas video dan audio" data-i18n-aria-label="Kualitas video dan audio"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg><span class="nav-label" data-i18n="Audio & Kualitas">Audio</span></button>
+      <button id="cinemaSettings" class="nav-icon" title="Kualitas &amp; Suara" data-i18n-title="Kualitas &amp; Suara" aria-label="Kualitas &amp; Suara" data-i18n-aria-label="Kualitas &amp; Suara"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg><span class="nav-label" data-i18n="Audio & Kualitas">Audio</span></button>
       <button id="settings" class="profile" title="Pengaturan Layar" data-i18n-title="Pengaturan Layar" aria-label="Pengaturan Layar" data-i18n-aria-label="Pengaturan Layar"><span class="profile-face" aria-hidden="true"></span><span class="nav-label" data-i18n="Pengaturan Layar">Pengaturan</span></button>
     </div>
   </header>
@@ -113,8 +114,8 @@
       <span id="streamInfo" class="player-source" data-i18n="MENYIAPKAN VIDEO">MENYIAPKAN VIDEO</span>
       <span id="audioInfo" class="subtitle-info" role="status"></span>
       <span id="subtitleInfo" class="subtitle-info" data-i18n="Subtitle: cek menu CC" title="Belum dapat memastikan sub Indo. Pilih Indonesia / Indonesian di menu CC atau Subtitle jika tersedia." data-i18n-title="Belum dapat memastikan sub Indo. Pilih Indonesia / Indonesian di menu CC atau Subtitle jika tersedia.">Subtitle: cek menu CC</span>
-      <button id="playerQuality" class="icon-button" aria-label="Kualitas video dan audio" data-i18n-aria-label="Kualitas video dan audio" title="Kualitas video dan audio"><svg class="icon"><use href="#i-sliders"/></svg></button>
-      <button id="playerSidebar" class="icon-button" aria-label="Tampilkan atau sembunyikan episode" data-i18n-aria-label="Tampilkan atau sembunyikan episode" title="Daftar episode" data-i18n-title="Daftar episode"><svg class="icon"><use href="#i-grid"/></svg></button>
+      <button id="playerQuality" class="icon-button" aria-label="Kualitas &amp; Suara" data-i18n-aria-label="Kualitas &amp; Suara" title="Kualitas &amp; Suara"><svg class="icon"><use href="#i-sliders"/></svg></button>
+      <button id="playerSidebar" class="icon-button" aria-label="Episode" data-i18n-aria-label="Episode" title="Daftar episode" data-i18n-title="Daftar episode"><svg class="icon"><use href="#i-grid"/></svg></button>
       <button id="fullscreen" class="icon-button" aria-label="Layar penuh" data-i18n-aria-label="Layar penuh"><svg class="icon"><use href="#i-expand"/></svg></button>
     </div>
     <div class="player-layout">

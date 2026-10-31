@@ -17,6 +17,10 @@ class AndroidBridge(
     private val prefs = activity.getSharedPreferences("layar_prefs", Context.MODE_PRIVATE)
 
     @JavascriptInterface
+    fun getEpisodeProgress(key: String): String =
+        if (key.matches(Regex("[a-z0-9-]+:[0-9]+:[0-9]+"))) activity.getSharedPreferences("layar_episode_progress", Context.MODE_PRIVATE).getString(key, "{}") ?: "{}" else "{}"
+
+    @JavascriptInterface
     fun getSettings(): String {
         val json = JSONObject().apply {
             put("quality", prefs.getString("quality", "auto"))
