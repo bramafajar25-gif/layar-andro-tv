@@ -42,6 +42,7 @@ const desktop = window.layarDesktop;
 const SOURCE = 'https://z2.idlixku.com';
 const IMG = 'https://image.tmdb.org/t/p/';
 const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const logo = (name, label) => `<svg class="brand-logo logo-${name}" role="img" aria-label="${label}"><use href="#logo-${name}"/></svg>`;
 const esc = text => String(text ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const storage = {
   get(key, fallback) { try { return JSON.parse(localStorage.getItem('layar.v2.' + key)) ?? fallback; } catch { return fallback; } },
@@ -65,7 +66,7 @@ async function changeLanguage(value) {
   i18n.setLanguage(value); storage.set('language', value);
   applyInterfaceLanguage();
   render();
-  if (wasSettings) { await openSettings(); $('#languagePreference')?.focus(); }
+  if (wasSettings) { await openSettings(); $('#languagePreference [aria-checked=true]')?.focus(); }
   else if (item) {
     renderDetail(item);
     if (season && $('#detailSeason') && Number($('#detailSeason').value) !== season) { $('#detailSeason').value = String(season); loadDetailEpisodes(item, season); }
@@ -560,12 +561,9 @@ async function startPlayback(item, season, episode) {
   $('#playerTitle').textContent = item.title;
   $('#playerSubtitle').textContent = episode ? `Season ${season} · Episode ${episode.number} — ${episode.title}` : `${item.year} · ${runtime(item.runtime)}`;
   $('#playerMessage').innerHTML = `<span class="spinner"></span><p>${t("Menyiapkan player IDLIX…")}</p>`;
-  $('#playerNote').textContent = t("Menyiapkan sesi. Pop-up diblokir; iklan dilewati saat tersedia.");
-  $('#streamInfo').textContent = t("MENYIAPKAN VIDEO");
-  $('#audioInfo').textContent = t('Audio belum terdeteksi');
-  $('#subtitleInfo').textContent = t('Subtitle: cek menu CC');
-  $('#subtitleInfo').title = t('Belum dapat memastikan sub Indo. Pilih Indonesia / Indonesian di menu CC atau Subtitle jika tersedia.');
-  $('#nativePlayer').disabled = true;
+  $('#playerNote').textContent = t('Menyiapkan video…');
+  renderPlayerBadges();
+  $('#nativePlayer').hidden = true;
   const series = item.type === 'tv_series';
   $('#playerSidebar').classList.toggle('hidden', !series);
   $('#player').classList.add('no-sidebar');
@@ -642,6 +640,27 @@ function soundStatus(info, reason) {
   const prefix = info.mode === 'atmos' ? 'Dolby Atmos · ' : '';
   return prefix + (info.active === 6 ? t('Aktif: suara dibagi ke 6 speaker 5.1.') : t('Aktif: surround 3D virtual untuk headphone atau speaker stereo.'));
 }
+// Media badges are Layar's own marks. They describe the stream and imply no certification.
+function mediaBadges({ height = 0, atmos = false, sound = 'original', subtitles = false } = {}) {
+  const badges = [];
+  if (height >= 2160) badges.push(`<span class="media-badge logo" title="4K Ultra HD">${logo('4k', '4K Ultra HD')}</span>`);
+  else if (height) badges.push(`<span class="media-badge"><b>${esc(qualityLabel(height))}</b></span>`);
+  if (atmos) badges.push(`<span class="media-badge logo" title="Dolby Atmos">${logo('dolby-atmos', 'Dolby Atmos')}</span>`);
+  if (sound === 'surround') badges.push(`<span class="media-badge" title="Surround 5.1">${icon('surround')}<b>5.1</b></span>`);
+  if (subtitles) badges.push(`<span class="media-badge" title="${esc(t('Sub Indo terdeteksi'))}"><b>CC</b><small>INDO</small></span>`);
+  return badges.join('');
+}
+function sourceHasAtmos(quality) { return !!streamFormats.atmos || !!quality?.audioTracks?.some(track => track.atmos); }
+function renderPlayerBadges() {
+  const status = lastPlayerStatus || {};
+  if (externalPlaying) { $('#playerBadges').innerHTML = `<span class="media-badge"><b>mpv</b></span>`; return; }
+  if (!status.height || status.advertisement) { $('#playerBadges').innerHTML = `<span class="player-pending"><i></i>${esc(t('Memuat'))}</span>`; return; }
+  const sound = status.quality?.sound;
+  $('#playerBadges').innerHTML = mediaBadges({ height: status.height, atmos: sourceHasAtmos(status.quality), sound: sound?.active ? sound.mode : 'original', subtitles: status.hasIndonesianSubtitles === true });
+}
+const soundIcons = { original: 'speaker', surround: 'surround', atmos: 'atmos' };
+const soundNotes = { original: 'Tanpa olahan', surround: 'Speaker 5.1 atau 3D di headphone', atmos: 'Track Atmos dari sumber' };
+const soundShort = { 'cross-origin': 'Tidak bisa diolah di sumber ini', 'no-atmos': 'Tidak ada di film ini', 'no-decoder': 'Perlu mpv dengan passthrough', 'atmos-hidden': 'Tidak ditampilkan sumber' };
 async function openPlayerQuality() {
   if (!playback) return;
   openModal();
@@ -653,42 +672,68 @@ async function openPlayerQuality() {
       desktop?.settings?.() || { quality: 'auto', blockAds: true, passthrough: false }
     ]);
     if (token !== settingsToken || playback !== current) return;
-    const levels = quality.levels || [];
-    const activeHeight = lastPlayerStatus?.height || quality.height;
-    const audio = streamFormats.audioFormats?.join(' / ') || t('Audio belum terdeteksi');
-    const sound = quality.sound;
-    $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t('Tutup'))}">${icon('close')}</button><div class="settings-body player-quality-menu"><span class="eyebrow">LAYAR / PLAYER</span><h2>${t('Kualitas & Suara')}</h2>
-      <p id="qualityActive" role="status">${activeHeight ? t('Resolusi aktif') + ': ' + qualityLabel(activeHeight) : t('Menunggu video')}</p>
-      <label class="settings-row"><span><b>${t('Resolusi')}</b><small>${t('Auto menyesuaikan kualitas dengan koneksi.')}</small></span><select id="streamQuality" ${!quality.canSelect ? 'disabled' : ''}>${levels.length ? levels.map(level => `<option value="${esc(level.id)}" ${level.id === quality.selected ? 'selected' : ''}>${esc(level.label)}</option>`).join('') : `<option>${t('Menu kualitas sumber')}</option>`}</select></label>
-      ${!quality.canSelect ? `<p>${t('Player ini tidak mengekspos pilihan kualitas. Gunakan menu kualitas pada video.')}</p>` : ''}
-      <p>${t('Resolusi di manifest')}: ${streamFormats.resolutions?.map(qualityLabel).join(' · ') || t('Belum terdeteksi')}</p>
-      <label class="settings-row"><span>Audio</span><select id="streamAudio" ${!quality.audioTracks?.length ? 'disabled' : ''}>${(quality.audioTracks?.length ? quality.audioTracks : [{id:"original",label:"Original"}]).map(track => `<option value="${esc(track.id)}" ${track.id === quality.audioSelected ? 'selected' : ''}>${esc(track.label)}</option>`).join('')}</select></label><div class="audio-format-badge" id="qualityAudio">${esc(audio)}</div><p>${t('Format audio di sumber; keluaran speaker mengikuti perangkat.')}</p>
-      <label class="settings-row"><span><b>${t('Mode suara')}</b><small>${t('Surround membagi suara ke 5.1 channel. Di headphone atau speaker stereo, channel itu dirender jadi surround 3D.')}</small></span><select id="streamSound" ${!sound ? 'disabled' : ''}>${(sound?.options || [{ id: 'original', available: true }]).map(option => `<option value="${option.id}" ${option.id === (sound?.mode || 'original') ? 'selected' : ''} ${option.available ? '' : 'disabled'}>${esc(t(soundLabels[option.id]))}${option.available ? '' : ' · ' + esc(t('tidak tersedia'))}</option>`).join('')}</select></label>
-      <p id="soundStatus" role="status">${esc(soundStatus(sound))}</p>
-      ${(sound?.options || []).filter(option => !option.available).map(option => `<p class="source-note">${esc(t(soundLabels[option.id]))}: ${esc(t(soundReasons[option.reason] || ''))}</p>`).join('')}
-      <label class="settings-row"><span><b>Audio passthrough · mpv</b><small>${t('Berlaku saat berikutnya membuka mpv. Memerlukan perangkat HDMI dan track yang mendukung.')}</small></span><input id="playerPassthrough" type="checkbox" ${preferences.passthrough ? 'checked' : ''} ${window.AndroidBridge || !preferences.nativePath ? 'disabled' : ''}></label>
-      ${window.AndroidBridge || !preferences.nativePath ? `<p>${t('Passthrough tersedia melalui mpv di laptop. Hubungkan mpv lewat Pengaturan.')}</p>` : ''}
-      <p id="qualityFeedback" role="status"></p>
+    const levels = quality.canSelect ? quality.levels || [] : [];
+    const tracks = quality.audioTracks || [], sound = quality.sound;
+    const activeHeight = lastPlayerStatus?.advertisement ? 0 : lastPlayerStatus?.height || quality.height || 0;
+    const sourceHeight = Math.max(0, ...(streamFormats.resolutions || []), ...levels.map(level => Number(level.id) || 0));
+    const locked = levels.filter(level => level.locked);
+    const passthrough = !window.AndroidBridge && !!preferences.nativePath;
+    const badges = mediaBadges({ height: activeHeight, atmos: sourceHasAtmos(quality), sound: sound?.active ? sound.mode : 'original' });
+    const qualityHint = !levels.length ? t('Player ini tidak mengekspos pilihan kualitas. Gunakan menu kualitas pada video.')
+      : locked.length ? t('{quality} perlu login akun IDLIX. Pilih untuk membuka form login sumber.', { quality: locked.map(level => level.label).join(', ') })
+      : t('Auto disarankan karena menyesuaikan koneksi. Pilih 1080p atau 4K jika internet cepat dan stabil.');
+    $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t('Tutup'))}">${icon('close')}</button><div class="settings-body player-quality-menu">
+      <header class="pq-head"><span class="eyebrow">LAYAR · PLAYER</span><h2>${t('Kualitas & Suara')}</h2>
+        <div class="pq-badges">${badges || `<span class="pq-muted">${esc(t('Menunggu video'))}</span>`}${sourceHeight > activeHeight && activeHeight ? `<span class="pq-muted">${esc(t('Sumber hingga {quality}', { quality: qualityLabel(sourceHeight) }))}</span>` : ''}</div>
+      </header>
+      <section class="pq-section"><h3>${t('Video')}</h3>
+        ${levels.length ? `<div class="pq-chips" role="radiogroup" aria-label="${esc(t('Resolusi'))}">${levels.map(level => `<button type="button" class="pq-chip" role="radio" data-quality="${esc(level.id)}" aria-checked="${level.id === quality.selected}" ${level.locked ? `data-locked title="${esc(t('Perlu login akun IDLIX'))}"` : ''}>${esc(level.label)}${level.locked ? icon('lock') : ''}</button>`).join('')}</div>` : ''}
+        <p class="pq-hint">${esc(qualityHint)}</p>
+      </section>
+      <section class="pq-section"><h3>${t('Suara')}</h3>
+        <div class="pq-modes" role="radiogroup" aria-label="${esc(t('Mode suara'))}">${(sound?.options || [{ id: 'original', available: true, reason: '' }]).map(option => `<button type="button" class="pq-mode" role="radio" data-sound="${option.id}" aria-checked="${option.id === (sound?.mode || 'original')}" ${option.available ? '' : `disabled title="${esc(t(soundReasons[option.reason] || ''))}"`}>${option.id === 'atmos' ? logo('dolby-atmos', 'Dolby Atmos') : icon(soundIcons[option.id])}<b>${esc(t(soundLabels[option.id]))}</b><small>${esc(t(option.available ? soundNotes[option.id] : soundShort[option.reason] || 'tidak tersedia'))}</small></button>`).join('')}</div>
+        <p class="pq-hint" id="soundStatus" role="status">${esc(soundStatus(sound))}</p>
+        ${tracks.length > 1 ? `<label class="settings-row"><span><b>${t('Track audio')}</b></span><select id="streamAudio">${tracks.map(track => `<option value="${esc(track.id)}" ${track.id === quality.audioSelected ? 'selected' : ''}>${esc(track.label)}</option>`).join('')}</select></label>` : ''}
+      </section>
+      <details class="pq-advanced"><summary>${t('Lanjutan')}</summary>
+        <p class="pq-hint">${t('Audio di sumber')}: ${esc(streamFormats.audioFormats?.join(' / ') || t('Belum terdeteksi'))}</p>
+        <label class="settings-row"><span><b>Audio passthrough · mpv</b><small>${t('Berlaku saat berikutnya membuka mpv. Memerlukan perangkat HDMI dan track yang mendukung.')}</small></span><input id="playerPassthrough" type="checkbox" ${preferences.passthrough ? 'checked' : ''} ${passthrough ? '' : 'disabled'}></label>
+        ${passthrough ? '' : `<p class="pq-hint">${t('Passthrough tersedia melalui mpv di laptop. Hubungkan mpv lewat Pengaturan.')}</p>`}
+      </details>
+      <p id="qualityFeedback" class="pq-hint" role="status"></p>
     </div>`;
-    $('#streamAudio').onchange = async event => { try { await desktop.playerAudio(event.target.value); } catch (error) { if (token === settingsToken) $('#qualityFeedback').textContent = errorText(error); } };
-    $('#streamSound').onchange = async event => {
-      const control = event.target; control.disabled = true;
+    const group = selector => [...document.querySelectorAll(selector)];
+    const check = (selector, key, value) => group(selector).forEach(node => node.setAttribute('aria-checked', String(node.dataset[key] === value)));
+    group('#dialog [data-quality]').forEach(chip => chip.onclick = async () => {
+      if (chip.getAttribute('aria-checked') === 'true') return;
+      const chips = group('#dialog [data-quality]'), label = chip.textContent.trim();
+      chips.forEach(node => { node.disabled = true; });
       try {
-        const result = await desktop.playerSound(control.value);
+        const result = await desktop.playerQuality(chip.dataset.quality);
         if (token !== settingsToken) return;
-        control.value = result.mode;
+        // The source shows its sign-in sheet in the player, so the menu steps aside.
+        if (result.locked) { closeModal(); toast(t('Masuk ke akun IDLIX di form yang muncul untuk membuka {quality}.', { quality: label })); return; }
+        check('#dialog [data-quality]', 'quality', chip.dataset.quality);
+        $('#qualityFeedback').textContent = t('Resolusi diganti ke {quality}.', { quality: label });
+      } catch (error) { if (token === settingsToken) $('#qualityFeedback').textContent = errorText(error); }
+      finally { if (token === settingsToken) chips.forEach(node => { node.disabled = false; }); }
+    });
+    group('#dialog [data-sound]').forEach(card => card.onclick = async () => {
+      if (card.getAttribute('aria-checked') === 'true') return;
+      const cards = group('#dialog [data-sound]');
+      cards.forEach(node => { node.dataset.wasDisabled = String(node.disabled); node.disabled = true; });
+      try {
+        const result = await desktop.playerSound(card.dataset.sound);
+        if (token !== settingsToken) return;
+        check('#dialog [data-sound]', 'sound', result.mode);
         $('#soundStatus').textContent = soundStatus(result, result.applied ? '' : result.reason);
+        if (lastPlayerStatus?.quality) { lastPlayerStatus.quality.sound = result; renderPlayerBadges(); }
         const latest = await desktop.playerQuality();
-        if (token === settingsToken && latest.audioTracks?.length) $('#streamAudio').value = latest.audioSelected;
+        if (token === settingsToken && $('#streamAudio') && latest.audioTracks?.length) $('#streamAudio').value = latest.audioSelected;
       } catch (error) { if (token === settingsToken) $('#soundStatus').textContent = errorText(error); }
-      finally { if (token === settingsToken) control.disabled = false; }
-    };
-    $('#streamQuality').onchange = async event => {
-      const control = event.target; control.disabled = true;
-      try { await desktop.playerQuality(control.value); }
-      catch (error) { if (token === settingsToken) $('#qualityFeedback').textContent = errorText(error); }
-      finally { if (token === settingsToken) control.disabled = !quality.canSelect; }
-    };
+      finally { if (token === settingsToken) cards.forEach(node => { node.disabled = node.dataset.wasDisabled === 'true'; }); }
+    });
+    if ($('#streamAudio')) $('#streamAudio').onchange = async event => { try { await desktop.playerAudio(event.target.value); } catch (error) { if (token === settingsToken) $('#qualityFeedback').textContent = errorText(error); } };
     $('#playerPassthrough').onchange = async event => {
       const control = event.target; control.disabled = true;
       try { const latest = await desktop.settings(); await desktop.saveSettings({ ...latest, passthrough: control.checked }); }
@@ -700,39 +745,116 @@ async function openPlayerQuality() {
     if (token === settingsToken) { closeModal(); toast(errorText(error)); }
   }
 }
-async function openSettings() {
+// Settings use switches and segmented buttons instead of form inputs so a TV remote can move through every control.
+const deviceName = () => window.AndroidBridge ? (isTv ? 'TV' : 'HP') : 'laptop';
+function settingsRow(name, title, note, control, wide = false) {
+  return `<div class="st-row${wide ? ' wide' : ''}"><span class="st-row-icon">${icon(name)}</span><div class="st-row-text"><b>${title}</b>${note ? `<small>${note}</small>` : ''}</div><div class="st-row-control">${control}</div></div>`;
+}
+function settingsSwitch(setting, checked, disabled) {
+  return `<button type="button" class="st-switch" role="switch" data-setting="${setting}" aria-checked="${!!checked}" ${disabled ? 'disabled' : ''}><span></span></button>`;
+}
+function settingsSegments(id, label, options, value, disabled) {
+  return `<div id="${id}" class="st-segments" role="radiogroup" aria-label="${esc(label)}">${options.map(([key, text]) => `<button type="button" role="radio" data-value="${key}" aria-checked="${key === value}" ${disabled ? 'disabled' : ''}>${esc(text)}</button>`).join('')}</div>`;
+}
+function settingsGuide() {
+  const device = deviceName();
+  const open = device === 'laptop' ? [t('Klik {icon} Kualitas & Suara', { icon: icon('sliders') }), t('Tombolnya ada di kanan atas player.')]
+    : device === 'TV' ? [t('Tekan ▲ lalu OK di remote'), t('Tombol atas memilih Kualitas & Suara di pojok kanan atas video.')]
+    : [t('Ketuk Kualitas & Suara'), t('Tombolnya ada di pojok kanan atas video.')];
+  const steps = [[t('Putar film atau episode'), t('Menu kualitas muncul saat video sedang diputar.')], open, [t('Pilih video dan suara'), t('Perubahan langsung berlaku tanpa mengulang film.')]];
+  const option = (name, text) => `<li><b>${name}</b><span>${text}</span></li>`;
+  return `<section id="settingsGuide" class="st-group"><h3>${t('Cara atur kualitas video & suara')}</h3>
+    <ol class="st-guide">${steps.map(([title, note], index) => `<li class="st-step"><span class="st-num">${index + 1}</span><div><b>${title}</b><small>${note}</small></div></li>`).join('')}</ol>
+    <div class="st-explain">
+      <div class="st-explain-card"><div class="st-explain-head">${logo('4k', '4K Ultra HD')}<b>${t('Kualitas video')}</b></div><ul class="st-options">
+        ${option('Auto', t('Disarankan. Menyesuaikan kecepatan internet agar tidak buffering.'))}
+        ${option('1080p', t('Full HD. Butuh internet sekitar 5 Mbps.'))}
+        ${option('4K UHD', t('Paling tajam. Butuh sekitar 25 Mbps dan layar 4K. Hanya muncul jika film menyediakannya.'))}
+      </ul><p class="st-tip">${icon('lock')}${t('Kualitas bertanda gembok perlu login akun IDLIX.')}</p></div>
+      <div class="st-explain-card"><div class="st-explain-head">${logo('dolby-atmos', 'Dolby Atmos')}<b>${t('Mode suara')}</b></div><ul class="st-options">
+        ${option(t('Asli'), t('Untuk speaker HP, laptop, atau TV biasa.'))}
+        ${option('Surround 5.1', t('Untuk headphone atau speaker 5.1. Suara terasa lebih luas.'))}
+        ${option('Dolby Atmos', t('Hanya aktif jika film punya track Atmos dan perangkat mendukung.'))}
+      </ul></div>
+    </div></section>`;
+}
+function settingsCapabilities(capabilities) {
+  const desktopApp = !window.AndroidBridge, fourK = capabilities.avc.supported || capabilities.hevc.supported;
+  const status = (kind, text) => `<span class="st-status ${kind}">${text}</span>`;
+  const ok = status('ok', t('Didukung')), missing = status('no', t('Belum terdeteksi'));
+  const atmos = capabilities.atmos.supported ? [ok, t('Decoder spasial terdeteksi')]
+    : capabilities.dolby.supported ? [status('partial', t('Sebagian')), t('Dolby Digital Plus tersedia; Atmos belum terkonfirmasi')]
+    : [missing, desktopApp ? t('Decoder internal belum mendukung; gunakan passthrough mpv') : t('Belum didukung; Surround 5.1 tetap bisa dipakai.')];
+  const card = (mark, state, note) => `<div class="st-cap"><div class="st-cap-mark">${mark}</div>${state}<small>${note}</small></div>`;
+  return `<section class="st-group"><h3>${t('Kemampuan {device} ini', { device: t(deviceName()) })}</h3><div class="st-caps">
+    ${card(logo('4k', '4K Ultra HD'), fourK ? ok : missing, fourK ? t('Decoder 2160p terdeteksi') : t('Decoder 2160p belum terdeteksi'))}
+    ${card('<span class="st-cap-text">HEVC<small>H.265</small></span>', capabilities.hevc.supported ? ok : missing, capabilities.hevc.supported ? t('Decoder tersedia') : desktopApp ? t('Gunakan mpv jika dibutuhkan') : t('Video diputar dengan format lain'))}
+    ${card(logo('dolby-atmos', 'Dolby Atmos'), atmos[0], atmos[1])}
+  </div><p class="st-note">${t('Pemeriksaan decoder bukan jaminan keluaran speaker atau headphone. Resolusi, HDR, dan audio asli bergantung pada sumber. Layar tidak mengubah video HD menjadi 4K atau audio stereo menjadi Atmos.')}</p></section>`;
+}
+async function openSettings(section) {
   if (!$('#languagePreference')) openModal(); ++detailToken; const token = ++settingsToken;
   $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t("Tutup"))}">${icon('close')}</button><div class="loading"><span class="spinner"></span><p>${t("Memeriksa ruang tonton…")}</p></div>`;
   try {
     const [preferences, capabilities] = await Promise.all([desktop?.settings() || { quality: 'auto', blockAds: true, passthrough: false, nativePath: '' }, probeCapabilities()]);
     if (token !== settingsToken) return;
-    const fourK = capabilities.avc.supported || capabilities.hevc.supported;
-    $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t("Tutup"))}">${icon('close')}</button><div class="settings-body"><span class="eyebrow">LAYAR / DESKTOP EDITION 03</span><h2>${t("Atur pengalamanmu.")}</h2><p>${t("Ruang tonton pribadi, langsung di laptop. Pengaturan tersimpan otomatis.")}</p><label class="settings-row"><span><b>${t("Bahasa tampilan")}</b><small>${t("Bahasa menu Layar, terpisah dari subtitle dan sinopsis sumber.")}</small></span><select id="languagePreference" aria-label="${esc(t("Bahasa tampilan"))}"><option value="id">Bahasa Indonesia</option><option value="en">English</option></select></label><p class="source-note">${t("Judul dan sinopsis tetap mengikuti bahasa dari sumber; mengganti bahasa menu tidak menerjemahkan film atau membuat subtitle baru.")}</p><h3>${t("Subtitle")}</h3><p>${t("Sub Indo tidak dijamin untuk semua judul. Saat menonton, pilih Indonesia / Indonesian di menu CC atau Subtitle player sumber.")}</p><p class="source-note">${t("Subtitle dari situs belum diteruskan ke mpv. Untuk file lokal, gunakan subtitle bawaan file atau tambahkan file subtitle sendiri di mpv.")}</p><h3>${t("Selama menonton")}</h3><label class="settings-row"><span><b>${t("Lewati iklan otomatis")}</b><small>${t("Blokir jaringan iklan dan klik Lewati saat tersedia. Waktu tunggu server dan verifikasi tetap mengikuti sumber.")}</small></span><input id="adPreference" type="checkbox" ${preferences.blockAds ? 'checked' : ''} ${!desktop ? 'disabled' : ''}></label><h3>${t("Player eksternal · mpv")}</h3><div class="settings-row"><div><b>${t("Pemutar untuk format cinema")}</b><small>${t("Gunakan mpv untuk file 4K, HEVC, dan audio multikanal lewat Buka file. Stream HLS kompatibel juga bisa diteruskan; sumber dengan player khusus tetap diputar di Layar.")}</small><p id="nativePath" class="native-status">${esc(preferences.nativePath ? t("mpv sudah dipilih") : t("Belum dihubungkan"))}</p></div><button id="chooseNative" class="btn" ${!desktop ? 'disabled' : ''}>${t("Pilih mpv.exe")}</button></div><label class="settings-row"><span><b>${t("Kualitas stream di mpv")}</b><small>${t("Hemat: bitrate hingga 2 Mbps. Seimbang: hingga 8 Mbps. Maksimum: kualitas tertinggi sumber, termasuk 4K bila tersedia. Player internal memakai pilihan kualitas sumber.")}</small></span><select id="qualityPreference" ${!desktop ? 'disabled' : ''}><option value="eco">${t("Hemat")}</option><option value="auto">${t("Seimbang")}</option><option value="maximum">${t("Maksimum / 4K")}</option></select></label><label class="settings-row"><span><b>Dolby Atmos / DTS · passthrough</b><small>${t("Di mpv, teruskan audio asli E-AC-3 atau TrueHD ke perangkat HDMI yang mendukung. Membutuhkan track Atmos asli; matikan untuk speaker laptop biasa.")}</small></span><input id="passthroughPreference" type="checkbox" ${preferences.passthrough ? 'checked' : ''} ${!desktop ? 'disabled' : ''}></label><h3>${t("Kemampuan player internal di laptop ini")}</h3><div class="capabilities"><div class="capability"><b>4K UHD</b><span>${fourK ? t("Decoder 2160p terdeteksi") : t("Decoder 2160p belum terdeteksi")}</span></div><div class="capability"><b>HEVC</b><span>${capabilities.hevc.supported ? t("Decoder tersedia") : t("Gunakan mpv jika dibutuhkan")}</span></div><div class="capability"><b>Dolby Atmos</b><span>${capabilities.atmos.supported ? t("Decoder spasial terdeteksi") : capabilities.dolby.supported ? t("Dolby Digital Plus tersedia; Atmos belum terkonfirmasi") : t("Decoder internal belum mendukung; gunakan passthrough mpv")}</span></div></div><p class="source-note">${t("Pemeriksaan decoder bukan jaminan keluaran speaker atau headphone. Resolusi, HDR, dan audio asli bergantung pada sumber. Layar tidak mengubah video HD menjadi 4K atau audio stereo menjadi Atmos.")}</p><p class="source-note">${t("Daftarku dan riwayat episode disimpan di laptop. Katalog: IDLIX · Gambar: TMDB.")}</p></div>`;
-    $('#qualityPreference').value = preferences.quality;
-    $('#languagePreference').value = i18n.language;
-    $('#languagePreference').onchange = event => changeLanguage(event.target.value).catch(error => toast(errorText(error)));
-    const controls = [$('#adPreference'), $('#qualityPreference'), $('#passthroughPreference')];
-    async function save() {
-      const value = { blockAds: $('#adPreference').checked, quality: $('#qualityPreference').value, passthrough: $('#passthroughPreference').checked };
-      controls.forEach(control => { control.disabled = true; });
-      try { await desktop.saveSettings(value); toast(t("Pengaturan disimpan. Berlaku pada pemutaran berikutnya.")); }
-      catch (error) { toast(errorText(error)); }
-      finally { if (token === settingsToken) controls.forEach(control => { control.disabled = false; }); }
+    const prefs = { quality: preferences.quality, blockAds: !!preferences.blockAds, passthrough: !!preferences.passthrough };
+    const device = deviceName(), locked = !desktop, mpvStatus = () => preferences.nativePath ? t("mpv sudah dipilih") : t("Belum dihubungkan");
+    // mpv runs only beside the Windows app, so phones and TVs never see its options.
+    const mpv = window.AndroidBridge ? '' : `<section class="st-group"><h3>${t("Player eksternal · mpv")}</h3><p class="st-lead">${t("Opsional. Pakai mpv untuk file 4K/HEVC atau audio Dolby Atmos lewat HDMI.")}</p><div class="st-card">
+      ${settingsRow('monitor', 'mpv.exe', `<span id="nativePath">${esc(mpvStatus())}</span>`, `<button id="chooseNative" class="btn" ${locked ? 'disabled' : ''}>${t("Pilih mpv.exe")}</button>`, true)}
+      ${settingsRow('sliders', t("Kualitas stream di mpv"), t("Hemat hingga 2 Mbps · Seimbang hingga 8 Mbps · Maksimum: kualitas tertinggi sumber, termasuk 4K."), settingsSegments('qualityPreference', t("Kualitas stream di mpv"), [['eco', t("Hemat")], ['auto', t("Seimbang")], ['maximum', t("Maksimum")]], prefs.quality, locked), true)}
+      ${settingsRow('speaker', 'Dolby Atmos / DTS passthrough', t("Kirim audio asli ke receiver atau soundbar HDMI. Matikan untuk speaker laptop."), settingsSwitch('passthrough', prefs.passthrough, locked))}
+    </div><p class="st-note">${t("Subtitle dari situs belum diteruskan ke mpv. Untuk file lokal, gunakan subtitle bawaan file atau tambahkan file subtitle sendiri di mpv.")}</p></section>`;
+    $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t("Tutup"))}">${icon('close')}</button><div class="settings-body settings-v2">
+      <header class="st-head"><span class="st-head-icon">${icon('gear')}</span><div><h2>${t("Pengaturan")}</h2><p>${t("Tersimpan otomatis di {device} ini.", { device: t(device) })}</p></div></header>
+      ${settingsGuide()}
+      <section class="st-group"><h3>${t("Umum")}</h3><div class="st-card">
+        ${settingsRow('globe', t("Bahasa tampilan"), t("Bahasa menu Layar. Judul, sinopsis, dan subtitle tetap mengikuti sumber."), settingsSegments('languagePreference', t("Bahasa tampilan"), [['id', 'Indonesia'], ['en', 'English']], i18n.language), true)}
+        ${settingsRow('shield', t("Lewati iklan otomatis"), t("Blokir iklan dan klik Lewati saat tersedia. Waktu tunggu dari server tetap berlaku."), settingsSwitch('blockAds', prefs.blockAds, locked))}
+        ${settingsRow('cc', 'Sub Indo', t("Saat menonton, pilih Indonesia / Indonesian di menu CC atau Subtitle. Tidak semua judul punya Sub Indo."), '')}
+      </div></section>
+      ${settingsCapabilities(capabilities)}
+      ${mpv}
+      <p class="st-foot">${t("Daftarku dan riwayat episode disimpan di {device} ini. Katalog: IDLIX · Gambar: TMDB.", { device: t(device) })}</p>
+    </div>`;
+    async function save(nodes, revert) {
+      nodes.forEach(node => { node.disabled = true; });
+      try { await desktop.saveSettings({ ...prefs }); toast(t("Pengaturan disimpan. Berlaku pada pemutaran berikutnya.")); }
+      catch (error) { revert(); toast(errorText(error)); }
+      finally { if (token === settingsToken) nodes.forEach(node => { node.disabled = false; }); }
     }
-    controls.forEach(control => { control.onchange = save; });
-    $('#chooseNative').onclick = async () => {
-      try { const result = await desktop.chooseNative(); if (token === settingsToken) $('#nativePath').textContent = result.nativePath ? t("mpv sudah dipilih") : t("Belum dihubungkan"); }
+    function segments(id, pick) {
+      const buttons = [...document.querySelectorAll(`#${id} [role=radio]`)];
+      const select = value => buttons.forEach(node => node.setAttribute('aria-checked', String(node.dataset.value === value)));
+      buttons.forEach(button => button.onclick = () => {
+        const previous = buttons.find(node => node.getAttribute('aria-checked') === 'true')?.dataset.value;
+        if (button.dataset.value === previous) return;
+        select(button.dataset.value);
+        pick(button.dataset.value, () => select(previous), buttons);
+      });
+    }
+    segments('languagePreference', value => changeLanguage(value).catch(error => toast(errorText(error))));
+    segments('qualityPreference', (value, revert, buttons) => { const previous = prefs.quality; prefs.quality = value; save(buttons, () => { prefs.quality = previous; revert(); }); });
+    document.querySelectorAll('#dialog .st-switch').forEach(button => button.onclick = () => {
+      const key = button.dataset.setting, next = !prefs[key];
+      prefs[key] = next; button.setAttribute('aria-checked', String(next));
+      save([button], () => { prefs[key] = !next; button.setAttribute('aria-checked', String(!next)); });
+    });
+    if ($('#chooseNative')) $('#chooseNative').onclick = async () => {
+      try { const result = await desktop.chooseNative(); preferences.nativePath = result.nativePath; if (token === settingsToken) $('#nativePath').textContent = mpvStatus(); }
       catch (error) { toast(errorText(error)); }
     };
+    if (section === 'guide') $('#settingsGuide').scrollIntoView({ block: 'start' });
   } catch (error) { if (token === settingsToken) $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t("Tutup"))}">${icon('close')}</button><div class="empty"><p>${esc(errorText(error))}</p></div>`; }
 }
 
 document.querySelectorAll('[data-tab]').forEach(button => { button.onclick = () => setTab(button.dataset.tab); });
 $('#home').onclick = () => setTab('home');
-$('#settings').onclick = openSettings;
-$('#mobileSettings')?.addEventListener('click', openSettings);
+$('#settings').onclick = () => openSettings();
+$('#mobileSettings')?.addEventListener('click', () => openSettings());
 $('#language').onchange = event => changeLanguage(event.target.value).catch(error => toast(errorText(error)));
-$('#cinemaSettings').onclick = openSettings;
+$('#cinemaSettings').onclick = () => openSettings('guide');
 $('#openFile').onclick = async () => {
   if (!desktop) return toast(t("Buka Layar.vbs untuk memutar file lokal."));
   try { const result = await desktop.openFile(); if (result.opened) toast(t("File dibuka di mpv.")); }
@@ -815,7 +937,7 @@ $('#nativePlayer').onclick = async () => {
   try {
     await desktop.native();
     if (playback !== current) return;
-    externalPlaying = true;
+    externalPlaying = true; renderPlayerBadges();
     $('#playerMessage').innerHTML = `<p>${t("Film diputar di mpv.")}</p><small>${t("Tutup mpv untuk kembali ke player internal.")}</small>`;
     $('#playerNote').textContent = t("Player internal dijeda selama mpv terbuka.");
   } catch (error) { toast(errorText(error)); }
@@ -828,27 +950,20 @@ function handlePlayerStatus(status) {
   if (!playback) return;
   if (status.state === 'close-request') { closePlayer(); return; }
   if (status.state === 'error') { $('#playerNote').textContent = t(status.message); }
-  else if (status.state === 'loaded') $('#playerNote').textContent = t("Menyiapkan video. Verifikasi atau waktu tunggu dapat diminta sumber.");
+  else if (status.state === 'loaded') $('#playerNote').textContent = t('Sumber sedang menyiapkan video.');
   else if (status.state === 'stream') {
     if (status.resolutions) streamFormats = status;
-    const audio = streamFormats.audioFormats?.join(' / ') || t('Audio belum terdeteksi');
-    $('#audioInfo').textContent = t('Audio sumber') + ': ' + audio;
-    if ($('#qualityAudio')) $('#qualityAudio').textContent = audio;
-    $('#nativePlayer').disabled = !status.externalReady || externalPlaying;
+    // mpv appears only once the source exposes a stream address it can open.
+    $('#nativePlayer').hidden = !status.externalReady || externalPlaying;
+    renderPlayerBadges();
     $('#nativePlayer').title = t("Putar stream yang sama dengan mpv yang dipilih di Pengaturan");
   } else if (status.state === 'metrics' && !externalPlaying) {
     if (playback.episode && !status.advertisement) window.LayarEpisodes.saveProgress(playback.item.slug, playback.season, playback.episode.number, {time:status.time,duration:status.duration});
-    const detected = status.hasIndonesianSubtitles === true;
-    $('#subtitleInfo').textContent = t(detected ? 'Sub Indo terdeteksi' : 'Subtitle: cek menu CC');
-    $('#subtitleInfo').title = t(detected ? 'Sub Indo terdeteksi' : status.subtitleTracks?.length ? 'Track subtitle lain terdeteksi; cek menu CC.' : 'Belum dapat memastikan sub Indo. Pilih Indonesia / Indonesian di menu CC atau Subtitle jika tersedia.');
-    const actual = qualityLabel(status.height);
-    if ($('#qualityActive')) $('#qualityActive').textContent = actual ? t('Resolusi aktif') + ': ' + actual : t('Menunggu video');
-    const available = streamFormats.resolutions?.[0];
-    $('#streamInfo').textContent = [actual ? actual + ' ' + t('AKTIF') : t("MENYIAPKAN VIDEO"), available ? t('SUMBER') + ' ' + qualityLabel(available) : '', streamFormats.atmos ? t("ATMOS DI SUMBER") : ''].filter(Boolean).join(' · ');
-    if (status.playing) $('#playerNote').textContent = t("Selamat menonton.") + (status.skipped ? t(" Iklan dilewati otomatis.") : '');
+    renderPlayerBadges();
+    if (status.playing) $('#playerNote').textContent = t("Selamat menonton.");
     if (status.playing && !status.externalReady) $('#nativePlayer').title = t("Sumber ini memakai player khusus. Gunakan player internal; mpv tetap tersedia untuk file lokal lewat Buka file.");
   } else if (status.state === 'external-closed') {
-    externalPlaying = false; $('#nativePlayer').disabled = false; $('#playerNote').textContent = t(status.message);
+    externalPlaying = false; $('#nativePlayer').hidden = false; $('#nativePlayer').disabled = false; $('#playerNote').textContent = t(status.message); renderPlayerBadges();
   }
 }
 desktop?.onPlayerStatus(handlePlayerStatus);

@@ -26,9 +26,8 @@ header#nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:
 .nav-end .nav-label{display:none}
 .nav-icon,.profile{display:flex;align-items:center;justify-content:center;width:40px;height:44px;padding:6px;background:none;border-radius:8px}
 header .language-select{width:55px;min-width:0;padding:7px 3px;background:#242424;border:1px solid #ffffff38;border-radius:6px;color:#fff}
-.profile-face{position:relative;width:26px;height:26px;border-radius:4px;background:#d90917;flex-shrink:0}
-.profile-face:before{content:"";position:absolute;left:4px;top:6px;width:3px;height:3px;background:#fff;border-radius:50%;box-shadow:13px 0 #fff}
-.profile-face:after{content:"";position:absolute;left:7px;top:10px;width:13px;height:8px;border-bottom:2px solid white;border-radius:0 0 80% 70%;transform:rotate(-8deg)}
+.profile{color:#d9d9d9}.profile .icon{width:22px;height:22px;transition:transform .4s ease}
+.profile:hover,.profile:focus-visible{color:#fff;background:#ffffff14}.profile:hover .icon{transform:rotate(60deg)}
 
 /* Main Layout Offset for Sidebar */
 main{min-height:85vh;margin-left:0}
@@ -418,3 +417,117 @@ body.locked #modal.episode-overlay{position:fixed;inset:0;z-index:999;backdrop-f
 #modal.episode-overlay::before{content:"";position:fixed;inset:0;z-index:-1;background-image:var(--episode-backdrop);background-size:cover;background-position:center;filter:blur(14px) brightness(.6);pointer-events:none}
 .episode-overlay .dialog{width:min(760px,100%);background:#141414e6;animation:none}
 .episode-overlay-content{padding:64px 24px 24px}
+/* Player chrome: title on the left, compact stream badges and controls on the right. */
+.player-top{height:72px;gap:14px;padding:0 22px;border-bottom:1px solid #ffffff10;background:linear-gradient(#0d0d0d,#111)}
+.player-heading>span{font-size:15px;font-weight:600}.player-heading small{font-size:11px;color:#8b8b8b}
+.player-badges{margin-left:auto;display:flex;align-items:center;gap:8px;min-width:0}
+.media-badge{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px;border:1px solid #ffffff38;border-radius:5px;color:#eee;font:700 11px/1 Arial,sans-serif;letter-spacing:.06em;white-space:nowrap}
+.media-badge small{font-size:8px;font-weight:700;letter-spacing:.14em;color:#bdbdbd}
+.media-badge .icon{width:15px;height:15px}
+.media-badge.logo{padding:0;border:0;background:none}
+.media-badge .brand-logo.logo-4k{width:39px;height:26px}.media-badge .brand-logo.logo-dolby-atmos{width:81px;height:22px}
+.pq-mode .brand-logo.logo-dolby-atmos{width:88px;height:24px;margin-bottom:4px}
+.player-pending{display:inline-flex;align-items:center;gap:8px;font-size:11px;color:#9a9a9a}
+.player-pending i{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pending 1.2s ease-in-out infinite}
+@keyframes pending{50%{opacity:.25}}
+.player-bottom{min-height:48px;gap:18px;padding:8px 22px;border-top:1px solid #ffffff10}
+.player-bottom>span{font-size:11px;color:#8b8b8b}
+.player-bottom .text-button{font-size:11px;color:#bbb;padding:7px 12px;border:1px solid #ffffff1f;border-radius:16px}
+.player-bottom .text-button:hover{color:#fff;border-color:#ffffff50;text-decoration:none}
+/* Quality & sound menu */
+.player-quality-menu{max-width:620px;padding:40px 40px 32px}
+.pq-head h2{margin:10px 0 14px}
+.pq-badges{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:26px}
+.pq-muted{font-size:12px;color:#8b8b8b}
+.pq-section{padding:22px 0 4px;border-top:1px solid #ffffff12;margin-top:22px}
+.pq-section h3,.player-quality-menu .pq-section h3{margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#9a9a9a}
+.pq-chips{display:flex;flex-wrap:wrap;gap:8px}
+.pq-chip{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 18px;border:1px solid #ffffff2e;border-radius:20px;background:transparent;color:#ddd;font-size:13px;font-weight:600}
+.pq-chip:hover{border-color:#ffffff80;color:#fff}
+.pq-chip[aria-checked=true]{background:#fff;color:#000;border-color:#fff}
+.pq-chip[data-locked]{color:#9a9a9a;border-style:dashed}.pq-chip .icon{width:14px;height:14px}
+.pq-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pq-mode{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-height:112px;padding:14px;border:1px solid #ffffff22;border-radius:10px;background:#ffffff06;color:#ddd;text-align:left}
+.pq-mode:hover:not(:disabled){border-color:#ffffff70}
+.pq-mode .icon{width:24px;height:24px;margin-bottom:4px}
+.pq-mode b{font-size:13px;color:#fff}.pq-mode small{font-size:11px;line-height:1.45;color:#9a9a9a}
+.pq-mode[aria-checked=true]{border-color:var(--accent);background:#e509141a}.pq-mode[aria-checked=true] .icon{color:var(--accent)}
+.pq-mode:disabled{opacity:.45}
+.player-quality-menu .pq-hint{font-size:12px;line-height:1.6;color:#9a9a9a;margin:12px 0 0}
+.pq-advanced{margin-top:22px;border-top:1px solid #ffffff12;padding-top:16px}
+.pq-advanced summary{cursor:pointer;font-size:12px;color:#bbb;list-style:none}.pq-advanced summary::-webkit-details-marker{display:none}
+.pq-advanced summary:before{content:"+ "}.pq-advanced[open] summary:before{content:"– "}
+@media(max-width:768px){.player-badges .media-badge:not(:first-child){display:none}.player-quality-menu{padding:48px 20px 24px}.pq-modes{grid-template-columns:1fr}.pq-mode{min-height:0;flex-direction:row;flex-wrap:wrap;align-items:center}.pq-mode small{flex-basis:100%}}
+/* Settings: grouped cards, switches and segmented buttons that work with touch, mouse and a TV remote. */
+.brand-logo{display:block;flex-shrink:0;color:#fff}
+.brand-logo.logo-4k{width:48px;height:32px}.brand-logo.logo-dolby-atmos{width:110px;height:30px}
+.settings-v2{max-width:880px;margin:0 auto;padding:40px 44px 32px}
+.st-head{display:flex;align-items:center;gap:16px;padding-right:40px}
+.st-head-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:#ffffff10;color:#fff;flex-shrink:0}.st-head-icon .icon{width:26px;height:26px}
+.settings-v2 .st-head h2{margin:0;font-size:28px;letter-spacing:-.4px}
+.settings-v2 .st-head p{margin:4px 0 0;font-size:13px;line-height:1.5;color:#9a9a9a}
+.st-group{margin-top:30px}
+.settings-v2 .st-group>h3{margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8f8f8f}
+.settings-v2 .st-lead{margin:-4px 0 12px;font-size:13px;line-height:1.6;color:#9a9a9a}
+.st-card{background:#ffffff08;border:1px solid #ffffff12;border-radius:14px}
+.st-row{display:flex;align-items:center;gap:16px;min-height:72px;padding:16px 18px}
+.st-row+.st-row{border-top:1px solid #ffffff10}
+.st-row-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:#ffffff0d;color:#ddd;flex-shrink:0}
+.st-row-text{flex:1;min-width:0}
+.st-row-text b{display:block;font-size:14px;font-weight:600;color:#fff}
+.st-row-text small{display:block;margin-top:4px;font-size:12px;line-height:1.55;color:#9a9a9a}
+.st-row-control{display:flex;align-items:center;gap:10px;flex-shrink:0}.st-row-control:empty{display:none}
+.st-row-control .btn{min-height:38px;padding:0 16px;font-size:13px;border-radius:8px}
+.st-switch{position:relative;width:48px;height:28px;padding:0;border-radius:14px;background:#4a4a4a;transition:background .2s}
+.st-switch span{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0006;transition:transform .2s}
+.st-switch[aria-checked=true]{background:var(--accent)}.st-switch[aria-checked=true] span{transform:translateX(20px)}
+.st-segments{display:inline-flex;gap:2px;padding:3px;border:1px solid #ffffff14;border-radius:10px;background:#00000059}
+.st-segments button{min-height:34px;padding:0 14px;border-radius:7px;background:none;color:#bbb;font-size:13px;font-weight:600;white-space:nowrap}
+.st-segments button:hover:not(:disabled){color:#fff}.st-segments button:focus-visible{outline-offset:2px}
+.st-segments button[aria-checked=true]{background:#fff;color:#000}
+.st-guide{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none}
+.st-step{display:flex;gap:12px;padding:14px;border:1px solid #ffffff12;border-radius:12px;background:#ffffff08}
+.st-num{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;font-weight:700;flex-shrink:0}
+.st-step b{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:13px;line-height:1.4;color:#fff}
+.st-step b .icon{width:15px;height:15px;padding:3px;border:1px solid #ffffff40;border-radius:5px;box-sizing:content-box}
+.st-step small{display:block;margin-top:4px;font-size:12px;line-height:1.5;color:#9a9a9a}
+.st-explain{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.st-explain-card{padding:18px;border:1px solid #ffffff12;border-radius:12px;background:#ffffff08}
+.st-explain-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:28px;margin-bottom:14px}.st-explain-head b{order:-1;font-size:14px}
+.st-options{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.st-options li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;font-size:12px;line-height:1.5;color:#a8a8a8}
+.st-options li b{font-weight:600;color:#fff}
+.settings-v2 .st-tip{display:flex;align-items:center;gap:8px;margin:14px 0 0;font-size:12px;line-height:1.5;color:#9a9a9a}.st-tip .icon{width:15px;height:15px}
+.st-caps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.st-cap{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px;border:1px solid #ffffff12;border-radius:12px;background:#ffffff08}
+.st-cap-mark{display:flex;align-items:center;height:32px}
+.st-cap-text{font:900 19px/1 "Arial Black",Arial,sans-serif;letter-spacing:-.5px}.st-cap-text small{margin-left:6px;font:700 9px Arial,sans-serif;letter-spacing:.12em;color:#9a9a9a}
+.st-cap>small{font-size:12px;line-height:1.5;color:#9a9a9a}
+.st-status{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700}
+.st-status:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.st-status.ok{background:#1db95424;color:#4ade80}.st-status.partial{background:#f59e0b24;color:#fbbf24}.st-status.no{background:#ffffff12;color:#aaa}
+.settings-v2 .st-note{margin:12px 0 0;font-size:11px;line-height:1.6;color:#7d7d7d}
+.settings-v2 .st-foot{margin:30px 0 0;padding-top:18px;border-top:1px solid #ffffff10;font-size:11px;line-height:1.6;color:#7d7d7d}
+@media(max-width:768px){
+  body:not(.tv-mode) .settings-v2{padding:56px 16px 24px}
+  body:not(.tv-mode) .settings-v2 .st-head h2{font-size:24px}
+  body:not(.tv-mode) :is(.st-guide,.st-explain,.st-caps){grid-template-columns:minmax(0,1fr)}
+  body:not(.tv-mode) .st-row{flex-wrap:wrap;gap:12px;padding:14px}
+  body:not(.tv-mode) .st-row.wide .st-row-control{flex-basis:100%;padding-left:50px}
+  body:not(.tv-mode) .st-row.wide .st-segments{width:100%}body:not(.tv-mode) .st-segments button{flex:1;padding:0 8px}
+  body:not(.tv-mode) .st-options li{grid-template-columns:88px minmax(0,1fr)}
+  body:not(.tv-mode) .st-cap{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between}
+  body:not(.tv-mode) .st-cap>small{flex-basis:100%}
+}
+.tv-mode .settings-v2{max-width:1120px;padding:48px 56px}
+.tv-mode .settings-v2 .st-head h2{font-size:34px}.tv-mode .settings-v2 .st-head p{font-size:16px}
+.tv-mode .settings-v2 .st-group>h3{font-size:14px}
+.tv-mode :is(.st-row-text b,.st-step b,.st-explain-head b){font-size:18px}
+.tv-mode :is(.st-row-text small,.st-step small,.st-options li,.st-cap>small,.st-tip){font-size:15px!important}
+.tv-mode .st-options li{grid-template-columns:140px minmax(0,1fr)}
+.tv-mode .st-segments button{min-height:46px;padding:0 22px;font-size:16px}
+.tv-mode .st-switch{width:62px;height:36px;border-radius:18px}.tv-mode .st-switch span{width:30px;height:30px}.tv-mode .st-switch[aria-checked=true] span{transform:translateX(26px)}
+.tv-mode .st-row-control .btn{min-height:46px;font-size:16px}
+.tv-mode .brand-logo.logo-4k{width:60px;height:40px}.tv-mode .brand-logo.logo-dolby-atmos{width:136px;height:37px}.tv-mode .st-cap-mark{height:40px}
+.tv-mode .st-cap-text{font-size:26px}.tv-mode .st-status{font-size:14px;padding:5px 12px}
+.tv-mode .settings-v2 :is(.st-note,.st-foot){font-size:14px}

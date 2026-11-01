@@ -115,3 +115,42 @@ test('a sound mode that cannot start audio leaves the track and mode unchanged',
   assert.equal(f.hls.audioTrack, 0); assert.equal(result.mode, 'original');
   assert.equal((await f.tools.setSoundMode('dolby-max')).applied, false);
 });
+
+function shakaFixture() {
+  const clicks = [], stored = new Map();
+  const button = (height, { locked = false, checked = false } = {}) => ({
+    dataset: { qualityHeight: String(height), ...(locked ? { unlockAction: 'sign-in' } : {}) }, textContent: height + 'p' + (locked ? 'lock' : ''),
+    classList: { contains: name => locked && name === 'nb-locked-quality' },
+    getAttribute: name => name === 'aria-checked' ? String(checked) : name === 'aria-label' ? `${height}p${locked ? ', locked. Sign in to unlock' : ''}` : null,
+    click() { clicks.push(height); }
+  });
+  const auto = { ...button(0), textContent: 'Auto', getAttribute: name => name === 'aria-checked' ? 'false' : null, click() { clicks.push('auto'); } };
+  const buttons = [button(1080, { locked: true }), button(720, { checked: true })];
+  const video = { videoHeight: 720 };
+  const root = { querySelector: s => s === 'video' ? video : s === '.shaka-enable-abr-button' ? auto : { textContent: 'NOW PLAYING' }, querySelectorAll: s => s === '.explicit-resolution' ? buttons : [] };
+  video.closest = () => root;
+  const context = vm.createContext({ window: {}, document: { querySelector: () => root },
+    localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) } });
+  vm.runInContext(fs.readFileSync(require.resolve('../stream-tools.js'), 'utf8'), context);
+  return { tools: context.LayarStream, clicks, stored };
+}
+
+test('Shaka quality menu is driven through its own buttons and keeps locked qualities locked', () => {
+  const f = shakaFixture();
+  const info = f.tools.snapshot();
+  assert.deepEqual([...info.levels].map(level => `${level.id}:${level.label}:${level.locked}`), ['-1:Auto:false', '1080:1080p:true', '720:720p:false']);
+  assert.equal(info.selected, '720'); assert.equal(info.canSelect, true);
+  assert.equal(f.tools.setQuality('1080'), 'locked');
+  assert.deepEqual([...f.clicks], [1080]);
+  assert.equal(f.stored.get('layar.playback.video'), undefined);
+  assert.equal(f.tools.setQuality('-1'), true);
+  assert.equal(f.stored.get('layar.playback.video'), 'Auto');
+  assert.equal(f.tools.setQuality('2160'), false);
+});
+
+test('a saved locked quality is never reapplied on the next video', () => {
+  const f = shakaFixture();
+  f.stored.set('layar.playback.video', '1080p');
+  f.tools.snapshot();
+  assert.deepEqual([...f.clicks], []);
+});

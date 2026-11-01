@@ -22,6 +22,10 @@ function installPlayerTools(options) {
       if (video.readyState > 0) resume(); else video.addEventListener('loadedmetadata', resume, {once:true});
     }
     if (!state.options.blockAds) return;
+    // The waiting screen carries an off-site promo link; it is hidden while the source's countdown keeps running.
+    for (const link of target?.querySelectorAll?.('a[href]') || []) {
+      try { if (new URL(link.href, location.href).origin !== location.origin) link.setAttribute('data-layar-promo', ''); } catch {}
+    }
     for (const button of document.querySelectorAll('button')) {
       if (!button.disabled && button.getClientRects().length && /^(skip ad|skip ads|lewati iklan|lanjutkan ke video)$/i.test(button.textContent.trim())) {
         button.click(); state.skipped++;

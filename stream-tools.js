@@ -68,6 +68,20 @@
           selected: String(jw.getCurrentQuality()), set: id => jw.setCurrentQuality(Number(id)) };
       }
     } catch {}
+    // Shaka UI, used by the source: Layar drives the player's own resolution menu, so locked qualities keep their sign-in gate.
+    const scope = video.closest?.('[data-layar-player]') || document;
+    const explicit = [...(scope.querySelectorAll?.('.explicit-resolution') || [])];
+    if (explicit.length) {
+      const seen = new Set(), auto = scope.querySelector('.shaka-enable-abr-button');
+      const levels = explicit.map(button => {
+        const height = Number(button.dataset?.qualityHeight) || parseInt(button.textContent, 10) || 0;
+        const locked = button.classList.contains('nb-locked-quality') || /\blocked\b/i.test(button.getAttribute('aria-label') || '');
+        return { id: String(height), label: qualityLabel(height), locked, unlock: locked ? (button.dataset?.unlockAction || 'sign-in') : '', button };
+      }).filter(level => level.id !== '0' && !seen.has(level.id) && seen.add(level.id)).sort((a, b) => Number(b.id) - Number(a.id));
+      const all = [...(auto ? [{ id: '-1', label: 'Auto', locked: false, unlock: '', button: auto }] : []), ...levels];
+      const checked = all.find(level => level.button.getAttribute('aria-checked') === 'true');
+      return { levels: all.map(({ button, ...level }) => level), selected: checked?.id || '-1', set: id => all.find(level => level.id === id)?.button.click() };
+    }
     return null;
   }
   function audioAdapter(video) {
@@ -102,7 +116,8 @@
     const done = restored.get(video) || {};
     for (const [key, controller, values] of [['video', adapter(video), 'levels'], ['audio', audioAdapter(video), 'tracks']]) {
       if (done[key] || !controller) continue;
-      try { const label = localStorage.getItem('layar.playback.' + key); const match = controller[values].find(v => v.label === label); if (match) controller.set(match.id); } catch {}
+      // Locked qualities are never reapplied, because selecting one opens the source's sign-in sheet.
+      try { const label = localStorage.getItem('layar.playback.' + key); const match = controller[values].find(v => v.label === label && !v.locked); if (match) controller.set(match.id); } catch {}
       done[key] = true;
     }
     // The saved sound mode is reapplied once the media has a source; Atmos falls back to surround when a title has no Atmos track.
@@ -118,11 +133,14 @@
     const video = currentVideo(), controller = adapter(video), audio = audioAdapter(video);
     return { audioTracks: audio?.tracks || [], audioSelected: audio?.selected || '', height: video?.videoHeight || 0, levels: controller?.levels || [], selected: controller?.selected || '', canSelect: !!controller, sound: soundInfo(video) };
   }
+  // Returns true when applied, false when unknown, and 'locked' when the source asked the viewer to sign in instead.
   function setQuality(id) {
     const controller = adapter(currentVideo());
-    if (!controller || !controller.levels.some(level => level.id === String(id))) return false;
+    const level = controller?.levels.find(item => item.id === String(id));
+    if (!level) return false;
     controller.set(String(id));
-    remember('video', controller.levels.find(level => level.id === String(id)).label);
+    if (level.locked) return 'locked';
+    remember('video', level.label);
     return true;
   }
   let manifest = parseManifest('');
@@ -281,15 +299,19 @@
     const say = (id, english) => en ? english : id;
     const host = document.createElement('div');
     host.id = 'layar-stream-controls';
-    host.innerHTML = `<button type="button" data-toggle aria-expanded="false" aria-controls="layar-stream-panel">${say('Kualitas & Suara', 'Playback Quality')}</button>
+    const gear = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>';
+    host.innerHTML = `<button type="button" data-toggle aria-expanded="false" aria-controls="layar-stream-panel">${gear}${say('Kualitas & Suara', 'Playback Quality')}</button>
       <section id="layar-stream-panel" role="dialog" aria-label="${say('Kualitas & Suara', 'Playback Quality')}" hidden>
-        <button type="button" data-close>${say('Tutup', 'Close')}</button>
+        <header><b>${say('Kualitas & Suara', 'Playback Quality')}</b><button type="button" data-close>${say('Tutup', 'Close')}</button></header>
         <p data-active role="status"></p>
+        <h4>Video</h4>
         <label>${say('Resolusi', 'Resolution')}<select data-quality aria-label="${say('Resolusi', 'Resolution')}"></select></label>
-        <p data-help></p><label>Audio<select data-audio-track aria-label="Audio"></select></label><p data-audio></p>
-        <label>${say('Mode suara', 'Sound mode')}<select data-sound aria-label="${say('Mode suara', 'Sound mode')}"></select></label><p data-sound-status role="status"></p>
-        <label><input type="checkbox" disabled> Audio passthrough</label>
-        <p>${say('Passthrough tidak tersedia di WebView. Di laptop gunakan pengaturan mpv.', 'Passthrough is unavailable in WebView. On a laptop, use mpv settings.')}</p>
+        <p data-help></p>
+        <h4>${say('Suara', 'Sound')}</h4>
+        <label>${say('Mode suara', 'Sound mode')}<select data-sound aria-label="${say('Mode suara', 'Sound mode')}"></select></label>
+        <p>${say('Asli: speaker biasa · Surround 5.1: headphone atau speaker 5.1 · Dolby Atmos: hanya film dengan track Atmos.', 'Original: regular speakers · Surround 5.1: headphones or 5.1 speakers · Dolby Atmos: only titles with an Atmos track.')}</p>
+        <p data-sound-status role="status"></p>
+        <label>${say('Track audio', 'Audio track')}<select data-audio-track aria-label="${say('Track audio', 'Audio track')}"></select></label><p data-audio></p>
       </section>`;
     const style = document.createElement('style');
     style.textContent = `#layar-stream-controls,#layar-stream-controls *{visibility:visible!important;box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none}
@@ -299,7 +321,11 @@
       #layar-stream-controls :focus{outline:3px solid white;outline-offset:2px}
       #layar-stream-controls section{width:320px;max-width:100%;max-height:80vh;overflow:auto;background:#151515f5;border:1px solid #ffffff44;border-radius:12px;padding:18px;margin-top:10px;box-shadow:0 8px 30px #0008}
       #layar-stream-controls label{display:flex;gap:10px;align-items:center;justify-content:space-between;margin:12px 0}
-      #layar-stream-controls p{font:12px/1.6 sans-serif;color:#ccc;white-space:normal}#layar-stream-controls select{max-width:180px}`;
+      #layar-stream-controls p{font:12px/1.6 sans-serif;color:#aaa;white-space:normal;margin:6px 0}#layar-stream-controls select{max-width:180px}
+      #layar-stream-controls [data-toggle]{display:inline-flex;align-items:center;gap:8px}#layar-stream-controls [data-toggle] svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+      #layar-stream-controls header{display:flex;align-items:center;justify-content:space-between;gap:12px}#layar-stream-controls header b{font-size:16px}
+      #layar-stream-controls h4{margin:16px 0 0;padding-top:14px;border-top:1px solid #ffffff1f;font:700 11px sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#999}
+      #layar-stream-controls [data-active]{color:#fff;font-weight:700}`;
     document.head.appendChild(style); document.body.appendChild(host);
     const toggle = host.querySelector('[data-toggle]'), panel = host.querySelector('section'), quality = host.querySelector('select');
     const close = () => { panel.hidden = true; toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); };
@@ -336,12 +362,12 @@
       const levels = info.canSelect ? info.levels : [{ id: 'source', label: say('Menu sumber', 'Source menu') }];
       const signature = JSON.stringify(levels);
       if (quality.dataset.levels !== signature) {
-        quality.replaceChildren(...levels.map(level => { const option = document.createElement('option'); option.value = level.id; option.textContent = level.label; return option; }));
+        quality.replaceChildren(...levels.map(level => { const option = document.createElement('option'); option.value = level.id; option.textContent = level.label + (level.locked ? ' · ' + say('perlu login', 'sign in') : ''); return option; }));
         quality.dataset.levels = signature;
       }
       quality.disabled = !info.canSelect;
       if (info.canSelect) quality.value = info.selected;
-      host.querySelector('[data-help]').textContent = info.canSelect ? say('Auto menyesuaikan koneksi.', 'Auto adapts to your connection.') : say('Gunakan menu kualitas player sumber. Pilihan tidak diekspos oleh player ini.', 'Use the source player quality menu. This player does not expose its quality choices.');
+      host.querySelector('[data-help]').textContent = info.canSelect ? say('Auto disarankan. Pilih 1080p atau 4K jika internet cepat dan stabil.', 'Auto is recommended. Choose 1080p or 4K on a fast, stable connection.') : say('Gunakan menu kualitas player sumber. Pilihan tidak diekspos oleh player ini.', 'Use the source player quality menu. This player does not expose its quality choices.');
       host.querySelector('[data-audio]').textContent = `${say('Audio di sumber', 'Source audio')}: ${manifest.audioFormats.join(' / ') || say('Belum terdeteksi', 'Not detected')}`;
       if (!soundBusy) {
         const soundSignature = JSON.stringify(info.sound.options);
@@ -357,7 +383,8 @@
     toggle.onclick = () => { panel.hidden = !panel.hidden; toggle.setAttribute('aria-expanded', String(!panel.hidden)); update(); if (!panel.hidden) host.querySelector('[data-close]').focus(); };
     host.querySelector('[data-close]').onclick = close;
     host.querySelector('[data-audio-track]').onchange = event => { setAudio(event.target.value); update(); };
-    quality.onchange = () => { setQuality(quality.value); update(); };
+    // A locked quality closes the panel so the source's sign-in sheet is reachable.
+    quality.onchange = () => { if (setQuality(quality.value) === 'locked') close(); update(); };
     soundSelect.onchange = async () => {
       soundBusy = true; soundSelect.disabled = true;
       try { const result = await setSoundMode(soundSelect.value); soundSelect.value = result.mode; soundStatus.textContent = describeSound(result, result.applied ? '' : result.reason); }

@@ -47,6 +47,11 @@ function installLayarPlayer(options) {
     if (!target) return;
 
     if (options.blockAds) {
+      // The waiting screen carries an off-site promo link; it is hidden while the source's countdown keeps running.
+      var links = target.querySelectorAll('a[href]');
+      for (var l = 0; l < links.length; l++) {
+        try { if (new URL(links[l].href, location.href).origin !== location.origin) links[l].setAttribute('data-layar-promo', ''); } catch (_) {}
+      }
       var buttons = target.querySelectorAll('button, .skip-button, .jw-skip');
       for (var i = 0; i < buttons.length; i++) {
         if (/^(skip ad|skip ads|lewati iklan|lanjutkan ke video)$/i.test((buttons[i].textContent || '').trim())) {

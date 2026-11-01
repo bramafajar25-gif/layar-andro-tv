@@ -102,6 +102,8 @@ class PlayerActivity : AppCompatActivity() {
             body.layar-player-active *{visibility:hidden!important}
             body.layar-player-active [data-layar-player],body.layar-player-active [data-layar-player] *{visibility:visible!important}
             body.layar-player-active [role="dialog"],body.layar-player-active [role="dialog"] *,body.layar-player-active dialog,body.layar-player-active dialog *{visibility:visible!important}
+            body.layar-player-active .app-dialog-backdrop,body.layar-player-active .app-dialog-backdrop *{visibility:visible!important}.app-dialog-backdrop{z-index:2147483646!important}
+            body.layar-player-active [data-layar-player] [data-layar-promo]{display:none!important}
             [data-layar-player]{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;min-height:0!important;max-height:none!important;margin:0!important;border-radius:0!important;z-index:2147483600!important}
             [data-layar-player] .hero-player-frame{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;margin:0!important;transform:none!important;border-radius:0!important}
         """.trimIndent()
