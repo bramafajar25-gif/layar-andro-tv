@@ -792,7 +792,7 @@ function settingsCapabilities(capabilities) {
     ${card(logo('dolby-atmos', 'Dolby Atmos'), atmos[0], atmos[1])}
   </div><p class="st-note">${t('Pemeriksaan decoder bukan jaminan keluaran speaker atau headphone. Resolusi, HDR, dan audio asli bergantung pada sumber. Layar tidak mengubah video HD menjadi 4K atau audio stereo menjadi Atmos.')}</p></section>`;
 }
-async function openSettings(section) {
+async function openSettings() {
   if (!$('#languagePreference')) openModal(); ++detailToken; const token = ++settingsToken;
   $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t("Tutup"))}">${icon('close')}</button><div class="loading"><span class="spinner"></span><p>${t("Memeriksa ruang tonton…")}</p></div>`;
   try {
@@ -845,7 +845,6 @@ async function openSettings(section) {
       try { const result = await desktop.chooseNative(); preferences.nativePath = result.nativePath; if (token === settingsToken) $('#nativePath').textContent = mpvStatus(); }
       catch (error) { toast(errorText(error)); }
     };
-    if (section === 'guide') $('#settingsGuide').scrollIntoView({ block: 'start' });
   } catch (error) { if (token === settingsToken) $('#dialog').innerHTML = `<button class="icon-button dialog-close" data-close aria-label="${esc(t("Tutup"))}">${icon('close')}</button><div class="empty"><p>${esc(errorText(error))}</p></div>`; }
 }
 
@@ -854,7 +853,6 @@ $('#home').onclick = () => setTab('home');
 $('#settings').onclick = () => openSettings();
 $('#mobileSettings')?.addEventListener('click', () => openSettings());
 $('#language').onchange = event => changeLanguage(event.target.value).catch(error => toast(errorText(error)));
-$('#cinemaSettings').onclick = () => openSettings('guide');
 $('#openFile').onclick = async () => {
   if (!desktop) return toast(t("Buka Layar.vbs untuk memutar file lokal."));
   try { const result = await desktop.openFile(); if (result.opened) toast(t("File dibuka di mpv.")); }

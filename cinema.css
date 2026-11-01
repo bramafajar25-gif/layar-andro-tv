@@ -299,7 +299,6 @@ select{background:#222222;border:1px solid #ffffff20;color:#d9d9d9;border-radius
 .skeleton-hero{margin:8px var(--gutter) 28px;height:65vh;min-height:390px;border-radius:16px}
 @media(max-width:1100px){
   header#nav{gap:14px}.nav-top{gap:18px}.nav-item{padding:0 10px}.nav-end{gap:5px}
-  #cinemaSettings{display:none}
   .hero-content{width:55%}.hero-tagline{display:none}
 }
 @media(max-width:768px){
