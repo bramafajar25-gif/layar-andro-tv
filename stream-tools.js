@@ -50,7 +50,10 @@
   function currentVideo() {
     const root = document.querySelector('[data-layar-player]');
     if (/sponsored|bersponsor|lewati dalam|skip in/i.test(root?.querySelector('.hero-player-titlebar')?.textContent || '')) return null;
-    return root?.querySelector('video') || null;
+    const inside = root?.querySelector('video');
+    if (inside) return inside;
+    const videos = Array.from(document.querySelectorAll('video'));
+    return videos.find(v => !v.closest?.('.ad, [class*="sponsor"], [id*="sponsor"]') && (v.readyState > 0 || !v.paused || v.duration > 0)) || videos[0] || null;
   }
   function adapter(video) {
     if (!video) return null;
@@ -185,14 +188,16 @@
       const mid = gain(), side = gain();
       chain(left, gain(0.5), mid); chain(right, gain(0.5), mid);
       chain(left, gain(0.5), side); chain(right, gain(-0.5), side);
-      bed.FL = chain(left, gain(0.8)); bed.FR = chain(right, gain(0.8));
-      bed.C = chain(mid, filter('highpass', 150), filter('lowpass', 8000), gain(0.75));
-      bed.LFE = chain(mid, filter('lowpass', 110), filter('lowpass', 110), gain(0.9));
-      bed.SL = chain(side, delay(0.012), filter('lowpass', 7000), gain(0.9));
-      bed.SR = chain(side, delay(0.017), filter('lowpass', 7000), gain(-0.9));
+      bed.FL = chain(left, gain(0.85)); bed.FR = chain(right, gain(0.85));
+      const vocalEQ = filter('peaking', 2800); vocalEQ.Q.value = 1.0; vocalEQ.gain.value = 2.0;
+      bed.C = chain(mid, filter('highpass', 140), vocalEQ, filter('lowpass', 8200), gain(0.85));
+      const bassBoost = filter('lowshelf', 85); bassBoost.gain.value = 3.0;
+      bed.LFE = chain(mid, bassBoost, filter('lowpass', 110), filter('lowpass', 110), gain(1.05));
+      bed.SL = chain(side, delay(0.014), filter('lowpass', 7000), gain(0.95));
+      bed.SR = chain(side, delay(0.019), filter('lowpass', 7000), gain(-0.95));
       // A decorrelated room tail feeds the surrounds so the sound extends behind the listener.
       const room = context.createConvolver(); room.normalize = false; room.buffer = roomImpulse(context); nodes.push(room);
-      chain(stereo, filter('highpass', 200), gain(0.35), room);
+      chain(stereo, filter('highpass', 200), gain(0.38), room);
       const roomSplit = context.createChannelSplitter(2); nodes.push(roomSplit); room.connect(roomSplit);
       roomSplit.connect(bed.SL, 0); roomSplit.connect(bed.SR, 1);
       dry = stereo;
@@ -210,14 +215,14 @@
     } else {
       const mix = gain(1, 2);
       for (const [name, angle] of SPEAKERS) {
-        if (name === 'LFE') { chain(bed.LFE, gain(0.6), mix); continue; }
+        if (name === 'LFE') { chain(bed.LFE, gain(0.65), mix); continue; }
         const panner = context.createPanner(); nodes.push(panner);
         panner.panningModel = 'HRTF'; panner.distanceModel = 'linear'; panner.rolloffFactor = 0; panner.refDistance = 1;
         const x = Math.sin(angle * Math.PI / 180), z = -Math.cos(angle * Math.PI / 180);
         if (panner.positionX) { panner.positionX.value = x; panner.positionY.value = 0; panner.positionZ.value = z; } else panner.setPosition(x, 0, z);
-        chain(bed[name], gain(name === 'C' ? 0.7 : 0.85), panner, mix);
+        chain(bed[name], gain(name === 'C' ? 0.75 : 0.9), panner, mix);
       }
-      chain(dry, gain(0.3, 2), mix);
+      chain(dry, gain(0.18, 2), mix);
       const limiter = context.createDynamicsCompressor(); nodes.push(limiter);
       limiter.threshold.value = -6; limiter.knee.value = 6; limiter.ratio.value = 8; limiter.attack.value = 0.003; limiter.release.value = 0.25;
       output = chain(mix, limiter);
@@ -254,7 +259,21 @@
     const context = sound.context, max = context.destination.maxChannelCount || 2;
     let graph = sound.graphs.get(video);
     if (!graph) {
-      graph = { source: context.createMediaElementSource(video), chain: null, channels: 0 };
+      let source = video.__layarMediaElementSourceNode;
+      if (!source) {
+        try {
+          source = context.createMediaElementSource(video);
+          video.__layarMediaElementSourceNode = source;
+        } catch (e) {
+          if (video.__layarMediaElementSourceNode) {
+            source = video.__layarMediaElementSourceNode;
+          } else {
+            console.warn('Layar: cannot create media element source:', e);
+            throw e;
+          }
+        }
+      }
+      graph = { source, chain: null, channels: 0 };
       sound.graphs.set(video, graph);
       video.addEventListener('play', () => { if (context.state !== 'running') context.resume().catch(() => {}); });
     }
@@ -269,23 +288,28 @@
     graph.chain.output.connect(context.destination); graph.channels = graph.chain.channels;
   }
   async function setSoundMode(mode) {
-    const video = currentVideo();
-    if (!SOUND_MODES.includes(mode) || !video) return { applied: false, reason: 'no-video', ...soundInfo(video) };
-    const option = soundInfo(video).options.find(item => item.id === mode);
-    if (!option.available) return { applied: false, reason: option.reason, ...soundInfo(video) };
-    // Audio is never routed into a context that is not running, because a suspended context would mute the film.
-    const processed = mode !== 'original' || sound.graphs.has(video);
-    if (processed && !await runningContext()) return { applied: false, reason: 'suspended', ...soundInfo(video) };
-    const tracks = audioAdapter(video);
-    if (mode === 'atmos') {
-      const atmos = tracks.tracks.find(track => track.atmos);
-      if (tracks.selected !== atmos.id) { sound.previousTrack = tracks.selected; tracks.set(atmos.id); }
-    } else if (sound.mode === 'atmos' && sound.previousTrack != null && tracks?.tracks.some(track => track.id === sound.previousTrack)) {
-      tracks.set(sound.previousTrack); sound.previousTrack = null;
+    try {
+      const video = currentVideo();
+      if (!SOUND_MODES.includes(mode) || !video) return { applied: false, reason: 'no-video', ...soundInfo(video) };
+      const option = soundInfo(video).options.find(item => item.id === mode);
+      if (!option || !option.available) return { applied: false, reason: option?.reason || 'unavailable', ...soundInfo(video) };
+      // Audio is never routed into a context that is not running, because a suspended context would mute the film.
+      const processed = mode !== 'original' || sound.graphs.has(video);
+      if (processed && !await runningContext()) return { applied: false, reason: 'suspended', ...soundInfo(video) };
+      const tracks = audioAdapter(video);
+      if (mode === 'atmos') {
+        const atmos = tracks?.tracks?.find(track => track.atmos);
+        if (atmos && tracks.selected !== atmos.id) { sound.previousTrack = tracks.selected; tracks.set(atmos.id); }
+      } else if (sound.mode === 'atmos' && sound.previousTrack != null && tracks?.tracks?.some(track => track.id === sound.previousTrack)) {
+        tracks.set(sound.previousTrack); sound.previousTrack = null;
+      }
+      if (processed) route(video, mode);
+      sound.mode = mode; remember('sound', mode);
+      return { applied: true, reason: '', ...soundInfo(video) };
+    } catch (err) {
+      console.warn('LayarStream setSoundMode error:', err);
+      return { applied: false, reason: err?.message || String(err), ...soundInfo() };
     }
-    if (processed) route(video, mode);
-    sound.mode = mode; remember('sound', mode);
-    return { applied: true, reason: '', ...soundInfo(video) };
   }
   function receiveManifest(text) {
     const next = parseManifest(text);

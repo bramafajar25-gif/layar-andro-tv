@@ -157,13 +157,28 @@ ipcMain.handle('layar:play', async (event, options) => {
     try { if (new URL(target).origin !== SOURCE) event.preventDefault(); } catch { event.preventDefault(); }
   });
   contents.session.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => callback({ cancel: settings.blockAds && isAdRequest(details.url) }));
-  contents.session.webRequest.onHeadersReceived({ urls: ['https://*/*'] }, (details, callback) => {
-    callback({});
+  contents.session.webRequest.onHeadersReceived({ urls: ['https://*/*', 'http://*/*'] }, (details, callback) => {
+    const responseHeaders = { ...details.responseHeaders };
+    responseHeaders['access-control-allow-origin'] = ['*'];
+    responseHeaders['access-control-allow-headers'] = ['*'];
+    responseHeaders['access-control-allow-credentials'] = ['true'];
+    callback({ responseHeaders });
     if (details.webContentsId !== contents.id || isAdRequest(details.url)) return;
     const type = Object.entries(details.responseHeaders || {}).find(([name]) => name.toLowerCase() === 'content-type')?.[1]?.join(' ') || '';
     if (/mpegurl/i.test(type) || /\.m3u8(?:\?|$)/i.test(details.url)) void captureStream(contents, details.url, generation);
   });
   contents.session.setPermissionRequestHandler((_, permission, callback) => callback(permission === 'fullscreen'));
+  contents.on('enter-html-full-screen', () => {
+    if (!win || win.isDestroyed() || !player) return;
+    const [width, height] = win.getContentSize();
+    player.setBounds({ x: 0, y: 0, width, height });
+    status({ state: 'html-fullscreen', active: true });
+  });
+  contents.on('leave-html-full-screen', () => {
+    if (!win || win.isDestroyed() || !player) return;
+    fitPlayer();
+    status({ state: 'html-fullscreen', active: false });
+  });
   contents.on('did-finish-load', async () => {
     try {
       const current = new URL(contents.getURL());
@@ -212,8 +227,20 @@ ipcMain.handle('layar:player-audio', async (event, id) => {
 ipcMain.handle('layar:player-sound', async (event, mode) => {
   trusted(event);
   if (!player || player.webContents.isDestroyed() || !['original','surround','atmos'].includes(mode)) throw new Error('Invalid sound mode');
-  // A user gesture lets the source page start its AudioContext.
-  return player.webContents.executeJavaScript(`window.LayarStream?.setSoundMode(${JSON.stringify(mode)}) || {applied:false,reason:'no-video'}`, true);
+  try {
+    return await player.webContents.executeJavaScript(`
+      (async () => {
+        try {
+          if (!window.LayarStream?.setSoundMode) return { applied: false, reason: 'no-video' };
+          return await window.LayarStream.setSoundMode(${JSON.stringify(mode)});
+        } catch (err) {
+          return { applied: false, reason: (err && err.message) || String(err) };
+        }
+      })()
+    `, true);
+  } catch (err) {
+    return { applied: false, reason: (err && err.message) || String(err) };
+  }
 });
 ipcMain.handle('layar:player-backdrop', async event => {
   trusted(event);
@@ -225,7 +252,13 @@ ipcMain.handle('layar:player-visible', (event, visible) => {
   if (typeof visible === 'boolean') player?.setVisible(visible);
 });
 ipcMain.handle('layar:close-player', event => { trusted(event); closePlayer(); });
-ipcMain.handle('layar:fullscreen', event => { trusted(event); win.setFullScreen(!win.isFullScreen()); });
+ipcMain.handle('layar:is-fullscreen', event => { trusted(event); return win ? win.isFullScreen() : false; });
+ipcMain.handle('layar:fullscreen', event => {
+  trusted(event);
+  if (!win) return false;
+  win.setFullScreen(!win.isFullScreen());
+  return win.isFullScreen();
+});
 ipcMain.handle('layar:open-source', (event, options) => { trusted(event); return shell.openExternal(options ? playbackUrl(options) : SOURCE); });
 
 async function createWindow() {

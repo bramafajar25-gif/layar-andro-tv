@@ -557,6 +557,8 @@ async function startPlayback(item, season, episode) {
   if (!$('#modal').classList.contains('hidden')) closeModal();
   document.body.classList.add('locked');
   $('#player').classList.remove('hidden');
+  $('#player').classList.add('cinema-fullscreen');
+  wakePlayerControls();
   $('#playerQuality').focus?.();
   $('#playerTitle').textContent = item.title;
   $('#playerSubtitle').textContent = episode ? `Season ${season} · Episode ${episode.number} — ${episode.title}` : `${item.year} · ${runtime(item.runtime)}`;
@@ -619,6 +621,8 @@ async function closePlayer() {
   if (!$('#modal').classList.contains('hidden')) closeModal();
   ++playerEpisodeToken;
   playback = null;
+  if (typeof clearTimeout === 'function') clearTimeout(playerControlsTimer);
+  $('#player').classList.remove('controls-hidden', 'cinema-fullscreen');
   $('#playerSurface iframe')?.remove?.();
   $('#player').classList.add('hidden');
   document.body.classList.remove('locked');
@@ -725,8 +729,12 @@ async function openPlayerQuality() {
       try {
         const result = await desktop.playerSound(card.dataset.sound);
         if (token !== settingsToken) return;
-        check('#dialog [data-sound]', 'sound', result.mode);
-        $('#soundStatus').textContent = soundStatus(result, result.applied ? '' : result.reason);
+        if (result && result.applied) {
+          check('#dialog [data-sound]', 'sound', result.mode);
+          $('#soundStatus').textContent = soundStatus(result, '');
+        } else {
+          $('#soundStatus').textContent = soundStatus(result, result?.reason || 'cross-origin');
+        }
         if (lastPlayerStatus?.quality) { lastPlayerStatus.quality.sound = result; renderPlayerBadges(); }
         const latest = await desktop.playerQuality();
         if (token === settingsToken && $('#streamAudio') && latest.audioTracks?.length) $('#streamAudio').value = latest.audioSelected;
@@ -922,11 +930,39 @@ document.addEventListener('keydown', event => {
   }
 });
 $('#modal').onclick = event => { if (event.target === $('#modal') || event.target.closest('[data-close]')) closeModal(); };
+let playerControlsTimer = null;
+function wakePlayerControls() {
+  const p = $('#player');
+  if (!p) return;
+  p.classList.remove('controls-hidden');
+  if (typeof clearTimeout === 'function') clearTimeout(playerControlsTimer);
+  if (playback && p.classList.contains('cinema-fullscreen') && typeof setTimeout === 'function') {
+    playerControlsTimer = setTimeout(() => {
+      if (playback && p.classList.contains('cinema-fullscreen') && $('#modal').classList.contains('hidden')) {
+        p.classList.add('controls-hidden');
+      }
+    }, 3500);
+  }
+}
+$('#player').addEventListener('mousemove', wakePlayerControls);
+$('#player').addEventListener('pointerdown', wakePlayerControls);
+
+async function togglePlayerFullscreen() {
+  const p = $('#player');
+  const entering = !p.classList.contains('cinema-fullscreen');
+  p.classList.toggle('cinema-fullscreen', entering);
+  if (desktop) await desktop.fullscreen();
+  else if (entering && !document.fullscreenElement) $('#player').requestFullscreen?.().catch(() => {});
+  else if (!entering && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  updateBounds();
+  wakePlayerControls();
+}
+
 $('#playerBack').onclick = closePlayer;
 $('#playerQuality').onclick = openPlayerQuality;
 $('#playerSeason').onchange = event => loadPlayerEpisodes(Number(event.target.value));
 $('#playerSidebar').onclick = openPlayerEpisodes;
-$('#fullscreen').onclick = () => desktop ? desktop.fullscreen() : document.fullscreenElement ? document.exitFullscreen() : $('#player').requestFullscreen();
+$('#fullscreen').onclick = togglePlayerFullscreen;
 $('#openSource').onclick = () => { if (playback) openExternal(playbackOptions()); };
 $('#retryPlayer').onclick = () => { if (playback) startPlayback(playback.item, playback.season, playback.episode); };
 $('#nativePlayer').onclick = async () => {
@@ -945,6 +981,12 @@ new ResizeObserver(updateBounds).observe($('#playerSurface'));
 function handlePlayerStatus(status) {
   lastPlayerStatus = status;
   if (status.state === 'local-error') { toast(t(status.message)); return; }
+  if (status.state === 'html-fullscreen') {
+    $('#player').classList.toggle('cinema-fullscreen', !!status.active);
+    updateBounds();
+    wakePlayerControls();
+    return;
+  }
   if (!playback) return;
   if (status.state === 'close-request') { closePlayer(); return; }
   if (status.state === 'error') { $('#playerNote').textContent = t(status.message); }

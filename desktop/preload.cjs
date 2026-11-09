@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('layarDesktop', {
   playerVisible: visible => ipcRenderer.invoke('layar:player-visible', visible),
   bounds: rect => ipcRenderer.send('layar:bounds', rect),
   closePlayer: () => ipcRenderer.invoke('layar:close-player'),
+  isFullScreen: () => ipcRenderer.invoke('layar:is-fullscreen'),
   fullscreen: () => ipcRenderer.invoke('layar:fullscreen'),
   openSource: options => ipcRenderer.invoke('layar:open-source', options),
   onPlayerStatus: callback => {
