@@ -27,16 +27,19 @@ async function hashFile(file) {
   return 'sha256:' + hash.digest('hex');
 }
 (async () => {
-  const source = await request('releases/tags/v3.0.5');
-  let reference = (await request('git/ref/tags/v3.0.5')).object;
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  const version = pkg.version;
+  const tag = 'v' + version;
+  const source = await request('releases/tags/' + tag);
+  let reference = (await request('git/ref/tags/' + tag)).object;
   while (reference.type === 'tag') reference = (await request('git/tags/' + reference.sha)).object;
   if (reference.type !== 'commit') throw new Error('Source tag does not resolve to a commit.');
   const platforms = [
-    { tag: 'windows-v3.0.5', title: 'Layar Windows Laptop / PC v3.0.5', file: 'Layar-Windows-Laptop-v3.0.5-x64.zip',
+    { tag: `windows-v${version}`, title: `Layar Windows Laptop / PC v${version}`, file: `Layar-Windows-Laptop-v${version}-x64.zip`,
       text: '**KHUSUS LAPTOP / PC WINDOWS x64**\n\nDownload ZIP di bagian Assets, ekstrak seluruh isinya, lalu buka **Layar.exe**. Tidak perlu memasang Node.js/npm. Biarkan folder resources, locales, dan DLL bersama aplikasi.' },
-    { tag: 'android-hp-v3.0.5', title: 'Layar Android HP / Tablet v3.0.5', file: 'Layar-Android-HP-v3.0.5.apk',
+    { tag: `android-hp-v${version}`, title: `Layar Android HP / Tablet v${version}`, file: `Layar-Android-HP-v${version}.apk`,
       text: '**KHUSUS HP / TABLET ANDROID**\n\nDownload dan pasang APK di bagian Assets. Nama aplikasi **Layar HP**. Navigasi sentuh, katalog portrait/landscape, player video landscape. APK memakai debug key CI.' },
-    { tag: 'android-tv-v3.0.5', title: 'Layar Android TV / TV Box v3.0.5', file: 'Layar-Android-TV-v3.0.5.apk',
+    { tag: `android-tv-v${version}`, title: `Layar Android TV / TV Box v${version}`, file: `Layar-Android-TV-v${version}.apk`,
       text: '**KHUSUS ANDROID TV / TV BOX**\n\nDownload dan pasang APK di bagian Assets pada TV. Nama aplikasi **Layar TV**. Navigasi D-Pad remote dan orientasi landscape. APK memakai debug key CI.' }
   ];
   const directory = path.join(__dirname, '..', 'dist', 'platform-releases');
@@ -45,6 +48,10 @@ async function hashFile(file) {
     const asset = source.assets.find(asset => asset.name === platform.file);
     if (!asset || asset.size < 1) throw new Error('Missing verified source asset: ' + platform.file);
     const file = path.join(directory, platform.file);
+    const localDownload = path.join(__dirname, '..', 'dist', 'downloads', platform.file);
+    if (fs.existsSync(localDownload) && fs.statSync(localDownload).size === asset.size) {
+      fs.copyFileSync(localDownload, file);
+    }
     if (!fs.existsSync(file) || fs.statSync(file).size !== asset.size || asset.digest && await hashFile(file) !== asset.digest) {
       console.log('Downloading', platform.file);
       const response = await fetch(asset.browser_download_url, { signal: AbortSignal.timeout(180000) });
@@ -53,7 +60,7 @@ async function hashFile(file) {
     }
     const digest = await hashFile(file);
     if (fs.statSync(file).size !== asset.size || asset.digest && digest !== asset.digest) throw new Error('Source asset checksum mismatch: ' + platform.file);
-    const body = platform.text + '\n\nFile identik dengan build v3.0.5 yang telah lolos pemeriksaan.\n\nDownload perangkat lain:\n' +
+    const body = platform.text + `\n\nFile identik dengan build v${version} yang telah lolos pemeriksaan.\n\nDownload perangkat lain:\n` +
       platforms.filter(other => other !== platform).map(other => '- [' + other.title + '](https://github.com/' + repo + '/releases/tag/' + other.tag + ')').join('\n');
     let release = await request('releases/tags/' + platform.tag, 'GET', undefined, true);
     if (!release) release = await request('releases', 'POST', {

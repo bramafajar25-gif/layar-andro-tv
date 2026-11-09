@@ -120,6 +120,9 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - uses: actions/download-artifact@v4
         with:
           pattern: Layar-*
@@ -144,13 +147,19 @@ jobs:
             | **ANDROID TV / TV BOX** | `Layar-Android-TV-*.apk` | Pasang di Android TV. Nama aplikasi **Layar TV**, navigasi remote dan landscape. |
             | **ANDROID HP / TABLET** | `Layar-Android-HP-*.apk` | Pasang di HP/tablet. Nama aplikasi **Layar HP**, navigasi sentuh dan katalog portrait/landscape. |
 
-            APK TV dan HP dibuat sebagai varian terpisah. Player video Android tetap landscape.
-            Pilih tiga file di atas; arsip **Source code** ditujukan untuk pengembangan.
-
-            Memuat UI episode dengan timeline season, scrollbar tersembunyi, serta menu resolusi dan deteksi audio HLS. Pilihan resolusi mengikuti kontrol yang tersedia di sumber. Passthrough tersedia melalui mpv pada Windows.
+            ### Pembaruan v${{ steps.version.outputs.value }}:
+            - **Fullscreen Bioskop Edge-to-Edge**: Player video mengisi 100% layar penuh tanpa terpotong atau terdesak bilah UI. Kontrol otomatis sembunyi saat memutar video.
+            - **Surround Sound 5.1 & Akustik Bioskop**: Suara 6-channel virtual dengan kejernihan vokal dialog (+2dB pada 2.8kHz), dentuman bass subwoofer (+3dB pada 85Hz), dan reverb 3D spasial HRTF.
+            - **Pemilih Episode Modern**: Tampilan timeline season dengan thumbnail, sinopsis, durasi, dan penanda progres tonton.
+            - **Tampilan Bersih & Halus**: Scrollbar disembunyikan untuk antarmuka yang bersih di semua layar (Laptop, TV, HP).
+            - **Dukungan HP Fleksibel**: Tampilan katalog Android HP mendukung mode portrait dan landscape dengan lancar.
 
             APK memakai debug key CI. Jika update aplikasi lama ditolak karena tanda tangan berbeda, hapus instalasi lama dahulu (data lokal ikut terhapus).
           files: |
             dist/downloads/Layar-Windows-Laptop-*.zip
             dist/downloads/Layar-Android-TV-*.apk
             dist/downloads/Layar-Android-HP-*.apk
+      - name: Publish separate platform release pages
+        run: node scripts/publish-platform-releases.cjs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,8 +1,8 @@
 {
   "name": "layar-desktop",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "private": true,
-  "description": "Layar \u2014 katalog dan player desktop",
+  "description": "Layar — katalog dan player desktop",
   "main": "desktop/main.cjs",
   "scripts": {
     "start": "node desktop/start.cjs",
