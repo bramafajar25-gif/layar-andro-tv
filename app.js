@@ -623,7 +623,12 @@ async function closePlayer() {
   ++playerEpisodeToken;
   playback = null;
   if (typeof clearTimeout === 'function') clearTimeout(playerControlsTimer);
-  $('#player').classList.remove('controls-hidden', 'cinema-fullscreen', 'mini-player');
+  $('#player').classList.remove('controls-hidden', 'cinema-fullscreen', 'mini-player', 'dragging');
+  $('#player').removeAttribute?.('tabindex');
+  $('#player').style?.removeProperty?.('--mini-left');
+  $('#player').style?.removeProperty?.('--mini-top');
+  $('#player').style?.removeProperty?.('--mini-right');
+  $('#player').style?.removeProperty?.('--mini-bottom');
   $('#playerSurface iframe')?.remove?.();
   $('#player').classList.add('hidden');
   document.body.classList.remove('locked');
@@ -907,13 +912,17 @@ searchInput.addEventListener('keydown', event => {
 document.addEventListener('keydown', event => {
   if (!isTv || event.defaultPrevented || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
   const active = document.activeElement;
-  if (/INPUT|TEXTAREA|SELECT/.test(active.tagName)) return;
-  const scope = !$('#modal').classList.contains('hidden') ? $('#dialog') : playback ? $('#player') : document;
-  const origin = active.getBoundingClientRect();
+  if (/INPUT|TEXTAREA|SELECT/.test(active?.tagName || '')) return;
+  const isMini = $('#player')?.classList.contains('mini-player');
+  const scope = !$('#modal').classList.contains('hidden') ? $('#dialog') : (playback && !isMini) ? $('#player') : document;
+  const origin = active?.getBoundingClientRect ? active.getBoundingClientRect() : { left: 0, right: 0, top: 0, bottom: 0 };
   const horizontal = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
   const sign = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
   let best, distance = Infinity;
-  for (const node of scope.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]')) {
+  const selector = isMini
+    ? 'button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href],#player.mini-player'
+    : 'button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]';
+  for (const node of scope.querySelectorAll(selector)) {
     if (node === active || !node.getClientRects().length) continue;
     const box = node.getBoundingClientRect();
     const dx = (box.left + box.right - origin.left - origin.right) / 2;
@@ -927,9 +936,22 @@ document.addEventListener('keydown', event => {
   if (best) {
     event.preventDefault();
     best.focus();
-    best.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (typeof best.scrollIntoView === 'function') {
+      best.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
   }
 });
+// Smooth horizontal wheel scrolling for laptop tracks
+document.addEventListener('wheel', event => {
+  const track = event.target?.closest?.('.track');
+  if (!track) return;
+  if (Math.abs(event.deltaY) > Math.abs(event.deltaX) && event.deltaY !== 0) {
+    if (track.scrollWidth > track.clientWidth) {
+      track.scrollBy?.({ left: event.deltaY * 1.5, behavior: 'smooth' });
+      event.preventDefault();
+    }
+  }
+}, { passive: false });
 $('#modal').onclick = event => { if (event.target === $('#modal') || event.target.closest('[data-close]')) closeModal(); };
 let playerControlsTimer = null;
 function wakePlayerControls() {
@@ -948,12 +970,93 @@ function wakePlayerControls() {
 $('#player').addEventListener('mousemove', wakePlayerControls);
 $('#player').addEventListener('pointerdown', wakePlayerControls);
 
+let miniDrag = null;
+function initMiniPlayerDrag() {
+  const p = $('#player');
+  if (!p) return;
+
+  function onPointerDown(event) {
+    if (!p.classList.contains('mini-player')) return;
+    if (event.target?.closest?.('#playerMiniClose, #playerMiniExpand')) return;
+    if (event.button !== undefined && event.button !== 0) return;
+
+    const startX = event.clientX ?? event.touches?.[0]?.clientX ?? 0;
+    const startY = event.clientY ?? event.touches?.[0]?.clientY ?? 0;
+    const rect = typeof p.getBoundingClientRect === 'function' ? p.getBoundingClientRect() : { left: 0, top: 0, width: 220, height: 124 };
+    const offsetX = startX - rect.left;
+    const offsetY = startY - rect.top;
+
+    miniDrag = { startX, startY, offsetX, offsetY, moved: false };
+
+    function onPointerMove(moveEvent) {
+      if (!miniDrag) return;
+      const clientX = moveEvent.clientX ?? moveEvent.touches?.[0]?.clientX ?? 0;
+      const clientY = moveEvent.clientY ?? moveEvent.touches?.[0]?.clientY ?? 0;
+      const dx = clientX - miniDrag.startX;
+      const dy = clientY - miniDrag.startY;
+
+      if (!miniDrag.moved && Math.hypot(dx, dy) > 5) {
+        miniDrag.moved = true;
+        p.classList.add('dragging');
+      }
+
+      if (miniDrag.moved) {
+        if (moveEvent.cancelable && typeof moveEvent.preventDefault === 'function') moveEvent.preventDefault();
+        const pWidth = p.offsetWidth || 220;
+        const pHeight = p.offsetHeight || 124;
+        const winWidth = typeof window !== 'undefined' ? (window.innerWidth || 1280) : 1280;
+        const winHeight = typeof window !== 'undefined' ? (window.innerHeight || 720) : 720;
+        const maxLeft = Math.max(10, winWidth - pWidth - 10);
+        const maxTop = Math.max(10, winHeight - pHeight - 10);
+        const newLeft = Math.min(maxLeft, Math.max(10, clientX - miniDrag.offsetX));
+        const newTop = Math.min(maxTop, Math.max(10, clientY - miniDrag.offsetY));
+
+        p.style?.setProperty?.('--mini-left', `${newLeft}px`);
+        p.style?.setProperty?.('--mini-top', `${newTop}px`);
+        p.style?.setProperty?.('--mini-right', 'auto');
+        p.style?.setProperty?.('--mini-bottom', 'auto');
+        updateBounds();
+      }
+    }
+
+    function onPointerUp() {
+      if (!miniDrag) return;
+      p.classList.remove('dragging');
+      if (typeof window !== 'undefined') {
+        window.removeEventListener?.('mousemove', onPointerMove);
+        window.removeEventListener?.('mouseup', onPointerUp);
+        window.removeEventListener?.('touchmove', onPointerMove);
+        window.removeEventListener?.('touchend', onPointerUp);
+        window.removeEventListener?.('touchcancel', onPointerUp);
+      }
+      if (typeof setTimeout === 'function') {
+        setTimeout(() => { miniDrag = null; }, 60);
+      } else {
+        miniDrag = null;
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener?.('mousemove', onPointerMove, { passive: false });
+      window.addEventListener?.('mouseup', onPointerUp);
+      window.addEventListener?.('touchmove', onPointerMove, { passive: false });
+      window.addEventListener?.('touchend', onPointerUp);
+      window.addEventListener?.('touchcancel', onPointerUp);
+    }
+  }
+
+  p.addEventListener?.('mousedown', onPointerDown);
+  p.addEventListener?.('touchstart', onPointerDown, { passive: false });
+}
+initMiniPlayerDrag();
+
 function minimizePlayer() {
   if (!playback) return;
   const p = $('#player');
   if (p.classList.contains('mini-player')) return;
   p.classList.remove('cinema-fullscreen', 'controls-hidden');
   p.classList.add('mini-player');
+  p.setAttribute?.('tabindex', '0');
   document.body.classList.remove('locked');
   if (desktop?.isFullScreen) desktop.isFullScreen().then(fs => { if (fs) desktop.fullscreen(); }).catch(() => {});
   updateBounds();
@@ -963,7 +1066,12 @@ function minimizePlayer() {
 function restorePlayer() {
   if (!playback) return;
   const p = $('#player');
-  p.classList.remove('mini-player');
+  p.classList.remove('mini-player', 'dragging');
+  p.removeAttribute?.('tabindex');
+  p.style?.removeProperty?.('--mini-left');
+  p.style?.removeProperty?.('--mini-top');
+  p.style?.removeProperty?.('--mini-right');
+  p.style?.removeProperty?.('--mini-bottom');
   p.classList.add('cinema-fullscreen');
   document.body.classList.add('locked');
   updateBounds();
@@ -1004,7 +1112,8 @@ $('#playerSidebar').onclick = openPlayerEpisodes;
 $('#fullscreen').onclick = togglePlayerFullscreen;
 $('#playerMiniExpand')?.addEventListener('click', event => { event.stopPropagation(); restorePlayer(); });
 $('#playerMiniClose')?.addEventListener('click', event => { event.stopPropagation(); closePlayer(); });
-$('#player').addEventListener('click', event => {
+$('#player')?.addEventListener?.('click', event => {
+  if (miniDrag?.moved) return;
   if ($('#player').classList.contains('mini-player') && !event.target.closest('#playerMiniClose')) {
     restorePlayer();
   }
@@ -1056,6 +1165,14 @@ function handlePlayerStatus(status) {
 desktop?.onPlayerStatus(handlePlayerStatus);
 window.addEventListener('scroll', () => $('#nav').classList.toggle('solid', scrollY > 35), { passive: true });
 document.addEventListener('keydown', event => {
+  const p = $('#player');
+  if (p?.classList?.contains('mini-player') && (document.activeElement === p || p.contains?.(document.activeElement))) {
+    if (['Enter', ' ', 'MediaPlayPause', 'Select'].includes(event.key) || [13, 32].includes(event.keyCode)) {
+      event.preventDefault();
+      restorePlayer();
+      return;
+    }
+  }
   if (['Escape', 'BrowserBack', 'GoBack'].includes(event.key) || [10009, 461].includes(event.keyCode)) { event.preventDefault(); handleEscape(); return; }
   if (event.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && !playback && $('#modal').classList.contains('hidden')) { event.preventDefault(); $('#search').focus(); }
   if (event.key === 'Tab' && !$('#modal').classList.contains('hidden')) {

@@ -51,7 +51,17 @@ function installPlayerTools(options) {
     const ad = /sponsored|bersponsor|lewati dalam|skip in/i.test(root?.querySelector('.hero-player-titlebar')?.textContent || '');
     if (ad) {
       const video = root?.querySelector('video');
-      if (video && video.playbackRate < 16) { video.playbackRate = 16; video.muted = true; }
+      if (video) {
+        try {
+          video.muted = true;
+          if (video.playbackRate < 16) video.playbackRate = 16;
+          if (Number.isFinite(video.duration) && video.duration > 0 && video.currentTime < video.duration) {
+            video.currentTime = video.duration;
+            video.dispatchEvent(new Event('timeupdate'));
+            video.dispatchEvent(new Event('ended'));
+          }
+        } catch (_) {}
+      }
     }
   }
 

@@ -58,6 +58,19 @@ function installLayarPlayer(options) {
           clickOnce(buttons[i]);
         }
       }
+
+      var adTitle = typeof target.querySelector === 'function' ? target.querySelector('.hero-player-titlebar') : null;
+      if (adTitle && /sponsored|bersponsor|lewati dalam|skip in/i.test(adTitle.textContent || '')) {
+        var adVideos = target.querySelectorAll('video');
+        for (var a = 0; a < adVideos.length; a++) {
+          try {
+            adVideos[a].muted = true;
+            if (isFinite(adVideos[a].duration) && adVideos[a].duration > 0 && adVideos[a].currentTime < adVideos[a].duration) {
+              adVideos[a].currentTime = adVideos[a].duration;
+            }
+          } catch (_) {}
+        }
+      }
     }
     // Only initial play overlays: generic Play/Replay labels can reload or pause a film.
     var overlays = target.querySelectorAll('.hero-player-play, .vjs-big-play-button, .jw-display-icon-container');
