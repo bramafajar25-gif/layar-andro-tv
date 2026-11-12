@@ -1,11 +1,30 @@
 'use strict';
 const path = require('node:path');
-const AD_HOSTS = ['doubleclick.net', 'googlesyndication.com', 'adsterra.com', 'popads.net', 'popcash.net', 'propellerads.com', 'exoclick.com'];
+const AD_HOSTS = [
+  'doubleclick.net', 'googlesyndication.com', 'googleadservices.com', 'google-analytics.com',
+  'adsterra.com', 'popads.net', 'popcash.net', 'propellerads.com', 'exoclick.com',
+  'adnxs.com', 'adsrvr.org', 'serving-sys.com', 'outbrain.com', 'taboola.com',
+  'mgid.com', 'revcontent.com', 'juicyads.com', 'trafficjunky.com', 'hilltopads.net',
+  'clickadu.com', 'richpush.co', 'pushwoosh.com', 'onclickmax.com', 'onclickmega.com',
+  'admaven.com', 'ad-maven.com', 'betterads.org', 'bidswitch.net', 'casalemedia.com',
+  'adcolony.com', 'unity3d.com', 'applovin.com', 'vungle.com', 'mopub.com',
+  'pubmatic.com', 'openx.net', 'rubiconproject.com', 'criteo.com', 'smartadserver.com',
+  'zedo.com', 'adbrite.com', 'advertising.com', 'yieldmanager.com',
+  'revenuehits.com', 'adf.ly', 'sh.st', 'bc.vc', 'ouo.io',
+  'linkbucks.com', 'shorte.st', 'adfoc.us', 'clicknupload.org',
+  'go.onclasrv.com', 'onclasrv.com', 'onclkds.com', 'clickaine.com',
+  'tsyndicate.com', 'syndication.exdynsrv.com', 'exdynsrv.com',
+  'a-ads.com', 'ad-delivery.net', 'adtng.com', 'ero-advertising.com',
+  'juicyads.com', 'trafficfactory.biz', 'trafficstars.com'
+];
+const AD_PATH_PATTERNS = [/\/ads?[\/_-]/i, /\/advert/i, /\/sponsor/i, /\/pop(up|under)/i, /\/banner/i, /\/tracking/i, /\/pixel/i, /\/impression/i];
 function isAdRequest(value) {
   try {
     const url = new URL(value);
-    return AD_HOSTS.some(host => url.hostname === host || url.hostname.endsWith('.' + host)) ||
-      (url.hostname === 'z2.idlixku.com' && url.pathname === '/api/watch/session/media');
+    if (AD_HOSTS.some(host => url.hostname === host || url.hostname.endsWith('.' + host))) return true;
+    if (url.hostname === 'z2.idlixku.com' && url.pathname === '/api/watch/session/media') return true;
+    if (AD_PATH_PATTERNS.some(pattern => pattern.test(url.pathname))) return true;
+    return false;
   } catch { return false; }
 }
 function isStreamURL(value) {
