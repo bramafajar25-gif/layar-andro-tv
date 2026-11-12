@@ -154,3 +154,97 @@ test('a saved locked quality is never reapplied on the next video', () => {
   f.tools.snapshot();
   assert.deepEqual([...f.clicks], []);
 });
+
+test('TV D-pad allows navigating from seek bar down to captions and settings buttons', () => {
+  const stored = new Map();
+  let focused = null;
+  const rangeInput = {
+    tagName: 'INPUT', type: 'range',
+    classList: { contains: name => name === 'shaka-seek-bar' },
+    matches: sel => sel.includes('input[type="range"]'),
+    focus() { focused = rangeInput; }
+  };
+  const captionBtn = {
+    tagName: 'BUTTON',
+    classList: { contains: name => name === 'shaka-captions-button' },
+    getAttribute: name => name === 'aria-label' ? 'Captions' : null,
+    getClientRects: () => [{ width: 30, height: 30 }],
+    focus() { focused = captionBtn; }
+  };
+  const settingsBtn = {
+    tagName: 'BUTTON',
+    classList: { contains: name => name === 'shaka-overflow-menu-button' },
+    getAttribute: name => name === 'aria-label' ? 'Settings' : null,
+    getClientRects: () => [{ width: 30, height: 30 }],
+    focus() { focused = settingsBtn; }
+  };
+  const panel = {
+    querySelectorAll: () => [captionBtn, settingsBtn]
+  };
+  const listeners = [];
+  const toggle = {
+    focus() { focused = toggle; },
+    setAttribute() {},
+    getClientRects: () => [{ width: 30, height: 30 }]
+  };
+  const makeNode = tag => ({
+    tagName: (tag || 'DIV').toUpperCase(),
+    dataset: {},
+    classList: { contains: () => false, add: () => {}, remove: () => {} },
+    setAttribute: () => {},
+    getAttribute: () => null,
+    appendChild: () => {},
+    replaceChildren: () => {},
+    contains: () => false,
+    getClientRects: () => [{ width: 30, height: 30 }],
+    querySelector: sel => sel === '[data-toggle]' ? toggle : makeNode(),
+    querySelectorAll: () => []
+  });
+  const doc = {
+    get activeElement() { return focused; },
+    getElementById: () => null,
+    createElement: tag => makeNode(tag),
+    querySelector: sel => {
+      if (sel.includes('shaka-seek-bar') || sel.includes('range')) return rangeInput;
+      if (sel.includes('shaka-controls-button-panel')) return panel;
+      return null;
+    },
+    querySelectorAll: () => [],
+    addEventListener: (type, fn) => listeners.push(fn),
+    head: { appendChild() {} },
+    body: { appendChild() {}, querySelector: () => null }
+  };
+  const context = vm.createContext({
+    window: { setInterval: () => 1, clearInterval: () => {}, addEventListener: () => {} },
+    document: doc,
+    setInterval: () => 1, clearInterval: () => {},
+    localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) }
+  });
+  vm.runInContext(fs.readFileSync(require.resolve('../stream-tools.js'), 'utf8'), context);
+  context.LayarStream.installControls({});
+
+  const keydown = listeners[0];
+  assert.equal(typeof keydown, 'function');
+
+  // Start on seek bar
+  rangeInput.focus();
+  assert.equal(focused, rangeInput);
+
+  // Press ArrowDown: moves to caption button!
+  let prevented = false;
+  keydown({ key: 'ArrowDown', preventDefault() { prevented = true; }, stopImmediatePropagation() {}, stopPropagation() {} });
+  assert.equal(prevented, true);
+  assert.equal(focused, captionBtn);
+
+  // Press ArrowRight on caption button: moves to settings button!
+  prevented = false;
+  keydown({ key: 'ArrowRight', preventDefault() { prevented = true; }, stopImmediatePropagation() {}, stopPropagation() {} });
+  assert.equal(prevented, true);
+  assert.equal(focused, settingsBtn);
+
+  // Press ArrowUp on settings button: moves back up to seek bar!
+  prevented = false;
+  keydown({ key: 'ArrowUp', preventDefault() { prevented = true; }, stopImmediatePropagation() {}, stopPropagation() {} });
+  assert.equal(prevented, true);
+  assert.equal(focused, rangeInput);
+});

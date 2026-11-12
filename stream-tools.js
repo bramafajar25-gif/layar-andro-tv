@@ -424,9 +424,119 @@
         event.preventDefault(); event.stopPropagation(); nodes[next].focus();
       }
     };
+
+    function isRangeInput(el) {
+      return el && (el.matches?.('input[type="range"], .shaka-seek-bar, [role="slider"]') || (el.tagName === 'INPUT' && el.type === 'range'));
+    }
+    function playerBottomButtons() {
+      const panel = document.querySelector('.shaka-controls-button-panel, .shaka-bottom-controls, [data-layar-player] .player-controls');
+      const nodes = panel ? panel.querySelectorAll('button:not(:disabled), [role="button"]:not([aria-disabled="true"])')
+                          : document.querySelectorAll('[data-layar-player] button:not([data-toggle]):not([data-close])');
+      return Array.from(nodes).filter(b => b.getClientRects().length && (!host.contains || !host.contains(b)));
+    }
+    function playerOpenMenuButtons() {
+      const menu = document.querySelector('.shaka-overflow-menu:not(.shaka-hidden), .shaka-settings-menu:not(.shaka-hidden), .shaka-text-selection-menu:not(.shaka-hidden), [role="menu"]:not([hidden])');
+      if (!menu || menu.offsetParent === null) return [];
+      return Array.from(menu.querySelectorAll('button:not(:disabled), [role="menuitem"]:not([aria-disabled="true"])')).filter(b => b.getClientRects().length);
+    }
+    function playerSeekBar() {
+      return document.querySelector('input[type="range"].shaka-seek-bar, .shaka-seek-bar, [data-layar-player] input[type="range"], [role="slider"]');
+    }
+
+    function navigatePlayerDpad(event) {
+      const key = event.key;
+      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Key_Up', 'Key_Down', 'Key_Left', 'Key_Right'].includes(key)) return false;
+      const active = document.activeElement;
+
+      // 1. Navigation inside open player menus (Captions list, Settings menu)
+      const menuItems = playerOpenMenuButtons();
+      if (menuItems.length && (menuItems.includes(active) || active?.closest?.('.shaka-overflow-menu, .shaka-settings-menu, .shaka-text-selection-menu, [role="menu"]'))) {
+        if (['ArrowDown', 'Key_Down'].includes(key)) {
+          event.preventDefault(); event.stopImmediatePropagation();
+          const next = (menuItems.indexOf(active) + 1) % menuItems.length;
+          menuItems[next].focus();
+          return true;
+        }
+        if (['ArrowUp', 'Key_Up'].includes(key)) {
+          event.preventDefault(); event.stopImmediatePropagation();
+          const prev = (menuItems.indexOf(active) - 1 + menuItems.length) % menuItems.length;
+          menuItems[prev].focus();
+          return true;
+        }
+        return false;
+      }
+
+      // 2. Navigation from Seek Bar (Time Bar)
+      if (isRangeInput(active)) {
+        if (['ArrowDown', 'Key_Down'].includes(key)) {
+          event.preventDefault(); event.stopImmediatePropagation();
+          const buttons = playerBottomButtons();
+          if (buttons.length) {
+            const caption = buttons.find(b => b.classList.contains('shaka-captions-button') || /caption|sub/i.test(b.getAttribute('aria-label') || ''));
+            const settings = buttons.find(b => b.classList.contains('shaka-overflow-menu-button') || /setting|overflow|pengaturan/i.test(b.getAttribute('aria-label') || ''));
+            const target = caption || settings || buttons[0];
+            target.focus();
+          }
+          return true;
+        }
+        if (['ArrowUp', 'Key_Up'].includes(key)) {
+          event.preventDefault(); event.stopImmediatePropagation();
+          toggle.focus();
+          return true;
+        }
+        return false;
+      }
+
+      // 3. Navigation between player bottom buttons (Play, Captions, Settings, etc.)
+      const buttons = playerBottomButtons();
+      if (buttons.includes(active)) {
+        if (['ArrowRight', 'Key_Right'].includes(key)) {
+          event.preventDefault(); event.stopImmediatePropagation();
+          const next = (buttons.indexOf(active) + 1) % buttons.length;
+          buttons[next].focus();
+          return true;
+        }
+        if (['ArrowLeft', 'Key_Left'].includes(key)) {
+          event.preventDefault(); event.stopImmediatePropagation();
+          const prev = (buttons.indexOf(active) - 1 + buttons.length) % buttons.length;
+          buttons[prev].focus();
+          return true;
+        }
+        if (['ArrowUp', 'Key_Up'].includes(key)) {
+          event.preventDefault(); event.stopImmediatePropagation();
+          const seek = playerSeekBar();
+          if (seek) seek.focus();
+          else toggle.focus();
+          return true;
+        }
+        if (['ArrowDown', 'Key_Down'].includes(key)) {
+          const menu = playerOpenMenuButtons();
+          if (menu.length) {
+            event.preventDefault(); event.stopImmediatePropagation();
+            menu[0].focus();
+            return true;
+          }
+        }
+        return false;
+      }
+
+      // 4. Navigation from Layar's top toggle downwards
+      if (active === toggle && ['ArrowDown', 'Key_Down'].includes(key)) {
+        event.preventDefault(); event.stopImmediatePropagation();
+        const seek = playerSeekBar();
+        if (seek) seek.focus();
+        else if (buttons.length) buttons[0].focus();
+        return true;
+      }
+
+      return false;
+    }
+
     document.addEventListener('keydown', event => {
+      if (navigatePlayerDpad(event)) return;
       if (host.hidden) return;
       if (['ArrowUp','ArrowDown','Key_Up','Key_Down'].includes(event.key) && !host.contains(document.activeElement)) {
+        if (document.activeElement && document.activeElement !== document.body && document.activeElement !== document.documentElement) return;
         event.preventDefault(); event.stopImmediatePropagation(); const episodes = host.querySelector('#layar-episode-panel'); if (episodes && !episodes.hidden) episodes.querySelector('button').focus(); else if (!panel.hidden) host.querySelector('[data-close]').focus(); else toggle.focus(); return;
       }
       if (!panel.hidden && ['Escape','BrowserBack','GoBack'].includes(event.key)) { event.preventDefault(); event.stopImmediatePropagation(); close(); }

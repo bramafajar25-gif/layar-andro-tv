@@ -363,6 +363,15 @@ class PlayerActivity : AppCompatActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
+            try {
+                enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build())
+            } catch (_: Exception) {}
+        }
+    }
+
     private fun hideCustomView() {
         if (customView == null) return
         (window.decorView as? ViewGroup)?.removeView(customView)

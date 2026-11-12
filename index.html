@@ -119,6 +119,13 @@
   <footer><span class="footer-logo">LAYAR</span><span data-i18n="Film, series, dan waktu buat diri sendiri.">Film, series, dan waktu buat diri sendiri.</span><span class="source-label"><i></i><span data-i18n="Katalog IDLIX">Katalog IDLIX</span></span></footer>
   <div id="modal" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Detail judul" data-i18n-aria-label="Detail judul" tabindex="-1"><div id="dialog" class="dialog"></div></div>
   <section id="player" class="player hidden" aria-label="Player Layar" data-i18n-aria-label="Player Layar">
+    <div id="playerMiniBar" class="player-mini-bar" aria-label="Kontrol mini player">
+      <span id="playerMiniTitle" class="player-mini-title"></span>
+      <div class="player-mini-actions">
+        <button id="playerMiniExpand" class="icon-button" aria-label="Perbesar layar" data-i18n-aria-label="Perbesar layar" title="Perbesar layar"><svg class="icon"><use href="#i-expand"/></svg></button>
+        <button id="playerMiniClose" class="icon-button" aria-label="Tutup pemutaran" data-i18n-aria-label="Tutup pemutaran" title="Tutup pemutaran"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>
+    </div>
     <div class="player-top">
       <button id="playerBack" class="icon-button" aria-label="Tutup player" data-i18n-aria-label="Tutup player"><svg class="icon"><use href="#i-arrow"/></svg></button>
       <div class="player-heading"><span id="playerTitle"></span><small id="playerSubtitle"></small></div>

@@ -118,7 +118,7 @@ function errorText(error) {
   return t(message);
 }
 function element(tag, className, html) { const node = document.createElement(tag); node.className = className || ''; if (html != null) node.innerHTML = html; return node; }
-function toast(text) { const node = $('#toast'); node.textContent = text; node.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => node.classList.remove('show'), 3200); }
+function toast(text) { const node = $('#toast'); if (!node) return; node.textContent = text; node.classList.add('show'); if (typeof clearTimeout === 'function') clearTimeout(toastTimer); if (typeof setTimeout === 'function') toastTimer = setTimeout(() => node.classList.remove('show'), 3200); }
 function metadata(item) {
   return `${item.rating ? `<span class="rating">★ ${item.rating.toFixed(1)}</span>` : ''}<span>${esc(item.year)}</span>${item.type === 'tv_series' && item.numberOfSeasons ? `<span>${t("{count} season", { count: item.numberOfSeasons })}</span>` : item.runtime ? `<span>${runtime(item.runtime)}</span>` : ''}${item.quality ? `<span class="quality">${esc(item.quality)}</span>` : ''}`;
 }
@@ -556,11 +556,12 @@ async function startPlayback(item, season, episode) {
   streamFormats = {}; externalPlaying = false; lastPlayerStatus = null;
   if (!$('#modal').classList.contains('hidden')) closeModal();
   document.body.classList.add('locked');
-  $('#player').classList.remove('hidden');
+  $('#player').classList.remove('hidden', 'mini-player');
   $('#player').classList.add('cinema-fullscreen');
   wakePlayerControls();
   $('#playerQuality').focus?.();
   $('#playerTitle').textContent = item.title;
+  if ($('#playerMiniTitle')) $('#playerMiniTitle').textContent = episode ? `${item.title} · S${season}E${episode.number}` : item.title;
   $('#playerSubtitle').textContent = episode ? `Season ${season} · Episode ${episode.number} — ${episode.title}` : `${item.year} · ${runtime(item.runtime)}`;
   $('#playerMessage').innerHTML = `<span class="spinner"></span><p>${t("Menyiapkan player IDLIX…")}</p>`;
   $('#playerNote').textContent = t('Menyiapkan video…');
@@ -622,7 +623,7 @@ async function closePlayer() {
   ++playerEpisodeToken;
   playback = null;
   if (typeof clearTimeout === 'function') clearTimeout(playerControlsTimer);
-  $('#player').classList.remove('controls-hidden', 'cinema-fullscreen');
+  $('#player').classList.remove('controls-hidden', 'cinema-fullscreen', 'mini-player');
   $('#playerSurface iframe')?.remove?.();
   $('#player').classList.add('hidden');
   document.body.classList.remove('locked');
@@ -947,8 +948,46 @@ function wakePlayerControls() {
 $('#player').addEventListener('mousemove', wakePlayerControls);
 $('#player').addEventListener('pointerdown', wakePlayerControls);
 
+function minimizePlayer() {
+  if (!playback) return;
+  const p = $('#player');
+  if (p.classList.contains('mini-player')) return;
+  p.classList.remove('cinema-fullscreen', 'controls-hidden');
+  p.classList.add('mini-player');
+  document.body.classList.remove('locked');
+  if (desktop?.isFullScreen) desktop.isFullScreen().then(fs => { if (fs) desktop.fullscreen(); }).catch(() => {});
+  updateBounds();
+  toast(t("Film diminimalkan ke pojok. Klik untuk perbesar."));
+}
+
+function restorePlayer() {
+  if (!playback) return;
+  const p = $('#player');
+  p.classList.remove('mini-player');
+  p.classList.add('cinema-fullscreen');
+  document.body.classList.add('locked');
+  updateBounds();
+  wakePlayerControls();
+}
+
+function handleEscape() {
+  if (!$('#modal').classList.contains('hidden')) {
+    closeModal();
+    return;
+  }
+  if (playback) {
+    const p = $('#player');
+    if (p.classList.contains('mini-player')) closePlayer();
+    else minimizePlayer();
+  }
+}
+
 async function togglePlayerFullscreen() {
   const p = $('#player');
+  if (p.classList.contains('mini-player')) {
+    restorePlayer();
+    return;
+  }
   const entering = !p.classList.contains('cinema-fullscreen');
   p.classList.toggle('cinema-fullscreen', entering);
   if (desktop) await desktop.fullscreen();
@@ -963,6 +1002,13 @@ $('#playerQuality').onclick = openPlayerQuality;
 $('#playerSeason').onchange = event => loadPlayerEpisodes(Number(event.target.value));
 $('#playerSidebar').onclick = openPlayerEpisodes;
 $('#fullscreen').onclick = togglePlayerFullscreen;
+$('#playerMiniExpand')?.addEventListener('click', event => { event.stopPropagation(); restorePlayer(); });
+$('#playerMiniClose')?.addEventListener('click', event => { event.stopPropagation(); closePlayer(); });
+$('#player').addEventListener('click', event => {
+  if ($('#player').classList.contains('mini-player') && !event.target.closest('#playerMiniClose')) {
+    restorePlayer();
+  }
+});
 $('#openSource').onclick = () => { if (playback) openExternal(playbackOptions()); };
 $('#retryPlayer').onclick = () => { if (playback) startPlayback(playback.item, playback.season, playback.episode); };
 $('#nativePlayer').onclick = async () => {
@@ -989,6 +1035,7 @@ function handlePlayerStatus(status) {
   }
   if (!playback) return;
   if (status.state === 'close-request') { closePlayer(); return; }
+  if (status.state === 'escape-press') { handleEscape(); return; }
   if (status.state === 'error') { $('#playerNote').textContent = t(status.message); }
   else if (status.state === 'loaded') $('#playerNote').textContent = t('Sumber sedang menyiapkan video.');
   else if (status.state === 'stream') {
@@ -1009,7 +1056,7 @@ function handlePlayerStatus(status) {
 desktop?.onPlayerStatus(handlePlayerStatus);
 window.addEventListener('scroll', () => $('#nav').classList.toggle('solid', scrollY > 35), { passive: true });
 document.addEventListener('keydown', event => {
-  if (['Escape', 'BrowserBack', 'GoBack'].includes(event.key) || [10009, 461].includes(event.keyCode)) { event.preventDefault(); if (!$('#modal').classList.contains('hidden')) closeModal(); else if (playback) closePlayer(); }
+  if (['Escape', 'BrowserBack', 'GoBack'].includes(event.key) || [10009, 461].includes(event.keyCode)) { event.preventDefault(); handleEscape(); return; }
   if (event.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && !playback && $('#modal').classList.contains('hidden')) { event.preventDefault(); $('#search').focus(); }
   if (event.key === 'Tab' && !$('#modal').classList.contains('hidden')) {
     const nodes = [...$('#dialog').querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]')].filter(node => node.getClientRects().length);

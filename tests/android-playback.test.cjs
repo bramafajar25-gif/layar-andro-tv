@@ -100,3 +100,28 @@ test('poster instant play mounts the movie player without opening details', asyn
   assert.equal(node('#modal').classList.contains('hidden'), true);
   assert.equal(node('#player').classList.contains('hidden'), false);
 });
+
+test('pressing Escape minimizes active playback into mini-player instead of closing it', async () => {
+  const { context, node } = fixture();
+  await vm.runInContext("startPlayback({type:'movie',slug:'the-hunt-2012',title:'The Hunt',year:2012})", context);
+  assert.equal(node('#player').classList.contains('cinema-fullscreen'), true);
+  assert.equal(node('#player').classList.contains('mini-player'), false);
+
+  // First Escape: minimizes to mini-player, playback stays running in background
+  vm.runInContext("handleEscape()", context);
+  assert.equal(node('#player').classList.contains('mini-player'), true);
+  assert.equal(node('#player').classList.contains('cinema-fullscreen'), false);
+  assert.notEqual(vm.runInContext("playback", context), null);
+
+  // Restore: returns to cinema-fullscreen
+  vm.runInContext("restorePlayer()", context);
+  assert.equal(node('#player').classList.contains('cinema-fullscreen'), true);
+  assert.equal(node('#player').classList.contains('mini-player'), false);
+
+  // Minimize again and second Escape: closes player
+  vm.runInContext("handleEscape()", context);
+  assert.equal(node('#player').classList.contains('mini-player'), true);
+  vm.runInContext("handleEscape()", context);
+  assert.equal(vm.runInContext("playback", context), null);
+  assert.equal(node('#player').classList.contains('hidden'), true);
+});

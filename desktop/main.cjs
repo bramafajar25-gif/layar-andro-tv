@@ -150,7 +150,7 @@ ipcMain.handle('layar:play', async (event, options) => {
   contents.setWindowOpenHandler(() => ({ action: 'deny' }));
   contents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return;
-    if (input.key === 'Escape' && !contents.isDestroyed()) { event.preventDefault(); status({ state: 'close-request' }); }
+    if (input.key === 'Escape' && !contents.isDestroyed()) { event.preventDefault(); status({ state: 'escape-press' }); }
     if (input.key === 'F11') { event.preventDefault(); win.setFullScreen(!win.isFullScreen()); }
   });
   contents.on('will-navigate', (event, target) => {
@@ -294,9 +294,12 @@ async function createWindow() {
       event.preventDefault();
       win.setFullScreen(!win.isFullScreen());
     }
-    if (input.key === 'Escape' && win.isFullScreen()) {
-      event.preventDefault();
-      win.setFullScreen(false);
+    if (input.key === 'Escape') {
+      if (win.isFullScreen()) {
+        event.preventDefault();
+        win.setFullScreen(false);
+      }
+      status({ state: 'escape-press' });
     }
   });
   win.on('resize', fitPlayer);
